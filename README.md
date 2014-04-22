@@ -16,7 +16,7 @@ With Xcodebump you can specify a marketing version string and everything else wi
 
 ## Installation
 
-Copy .xcodebump (script) and .xcodebump.cfg (config) files into the top-level of your Xcode project. Edit the config file parameters and PATH parameters in the script as needed.
+Copy .xcodebump.sh (script) and .xcodebump.cfg (config) files into the top-level of your Xcode project. Edit the config file parameters and PATH parameters in the script as needed.
 
 **NOTE:** It is intended that you copy **both** of these files into your project so that you won't have to worry about future changes to this code.
 
@@ -51,15 +51,15 @@ The above commands will install the new grep as "ggrep" so you can avoid any pot
 
 Once you're ready to create a build (for testing, release, whatever) just run Xcodebump from the top level of your project. The following example would update the marketing version string to "2.5.1" and increment the build number:
 
-	>sh ./.xcodebump 2.5.1
+	>sh ./.xcodebump.sh 2.5.1
 	
 The target for the above command is the one specified by the **TARGETNAME** parameter in the config file. You can also specify the TARGETNAME on the command line:
 
-	>sh ./.xcodebump -t MyTarget 2.5.1
+	>sh ./.xcodebump.sh -t MyTarget 2.5.1
 	
 To get a list of supported command line flags and parameters:
 
-	>sh ./.xcodebump -h
+	>sh ./.xcodebump.sh -h
 	
 ## Todo
 

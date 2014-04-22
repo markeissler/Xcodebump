@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash
 #
 # STEmacsModelines:
 # -*- Shell-Unix-Generic -*-
@@ -51,7 +51,7 @@ PATH_GREP="/usr/local/bin/ggrep"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.0.0
+VERSION=1.0.1
 PROGNAME=`basename $0`
 
 # standard config file location
