@@ -3,8 +3,7 @@
 This script does the following:
 
 1. Update the Xcode marketing version string (CFBundleShortVersionString) to the releaseVersion supplied.
-2. Increment the Xcode build number (CFBundleVersion) to the bundleVersion
-supplied or increment an existing number.
+2. Increment the Xcode build version (CFBundleVersion) to the buildNumber supplied or increment an existing number (extracted from the Info.plist).
 3. Commit changes to git.
 4. Generate a tag to identify the commit the release/build and tag the commit.
 
@@ -60,7 +59,19 @@ The target for the above command is the one specified by the **TARGETNAME** para
 To get a list of supported command line flags and parameters:
 
 	>sh ./.xcodebump.sh -h
+
+In general, options specified on the command line will override defaults and those found in the config file. There is one exception: if a value is set for tagPrefix in the config file, you can override the value from the command line as long as the override is not an empty string. To clear the tagPrefix, use the -e command line option.
+
+## Release Version
+The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump: it's a feature, not a bug. In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle.
+
+## Commit Tags
+Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and buildNumber. The format looks like this:
+
+	build-2.5.1-248
 	
+Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-".
+ 
 ## Todo
 
 This version of Xcodebump expects that your target's Info.plist file is located in the top-level of your project. This limitation will be fixed shortly.
@@ -72,3 +83,8 @@ Submit bugs by opening an issue on this project's github page.
 ## License
 
 Xcodebump is licensed under the MIT open source license.
+
+## Appreciation
+Like this script? Let me know! You can send some kudos my way courtesy of Flattr:
+
+[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=markeissler&url=https://github.com/markeissler/Xcodebump&title=Xcodebump&language=bash&tags=github&category=software)
