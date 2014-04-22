@@ -72,3 +72,8 @@ Submit bugs by opening an issue on this project's github page.
 ## License
 
 Xcodebump is licensed under the MIT open source license.
+
+## Appreciation
+Like this script? Let me know! You can send some kudos my way courtesy of Flattr:
+
+[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=markeissler&url=https://github.com/markeissler/Xcodebump&title=Xcodebump&language=bash&tags=github&category=software)
