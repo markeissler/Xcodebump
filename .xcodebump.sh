@@ -38,6 +38,7 @@
 PATH_GIT="/usr/bin/git"
 PATH_CUT="/usr/bin/cut"
 PATH_HEAD="/usr/bin/head"
+PATH_FIND="/usr/bin/find"
 
 # Install gnu grep via homebrew... (this will not symlink for you)
 #
@@ -51,7 +52,7 @@ PATH_GREP="/usr/local/bin/ggrep"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.0.2
+VERSION=1.0.3
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -316,6 +317,19 @@ function isGnuGrep() {
   echo 1; return 0;
 }
 
+# findInfoPlist()
+#
+# Search the current directory for a TARGET-Info.plist file.
+#
+function findInfoPlist() {
+  _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+  if [[ -z ${_plistPath} || $? -ne 0 ]]; then
+    echo ""; return 1;
+  fi
+
+  echo ${_plistPath}; return 0
+}
+
 # promptConfirm()
 #
 # Confirm a user action. Input case insensitive.
@@ -526,12 +540,14 @@ fi
 #
 
 # Grab info from plist
-PATH_PLIST="${TARGETNAME}-Info.plist"
-if [[ ! -w ${PATH_PLIST} ]]; then
+printf "Checking for TARGET-Info.plist file... "
+PATH_PLIST=$(findInfoPlist)
+if [[ -z ${PATH_PLIST} ]] || [[ ! -w ${PATH_PLIST} ]]; then
   echo "ABORTING. Unable to open plist file: ${PATH_PLIST}"
   echo
   exit 1
 fi
+echo "Found: ${PATH_PLIST}"
 
 #
 # UPDATE CFBundleShortVersionString
