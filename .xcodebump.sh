@@ -51,7 +51,7 @@ PATH_GREP="/usr/local/bin/ggrep"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.0.1
+VERSION=1.0.2
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -63,6 +63,8 @@ DEBUG=0
 FORCEEXEC=0
 GETOPT_OLD=0
 TARGETNAME=""
+TAG_PREFIX="build"
+EMPTYPREFIX=0
 BUILDNUM=-1
 BUILDNUM_START=1
 BUILDVER=-1
@@ -91,6 +93,8 @@ OPTIONS:
    -b, --build buildNumber  Sets build to buildNumber specified
    -d, --debug              Turn debugging on (increases verbosity)
    -c, --config filePath    Path to config file (overrides default)
+   -p, --prefix tagPrefix   String to prepend to generated commit tag
+   -e, --empty-prefix       Sets tagPrefix to an empty string
    -t, --target targetName  Sets target to work on
    -f, --force              Execute updates without user prompt
    -h, --help               Show this message
@@ -109,13 +113,15 @@ Update the marketing and build numbers for the xcode project. This script will
 grab the info from the command line or configuration file.
 
 OPTIONS:
-   -b Sets build to buildNumber specified
-   -d Turn debugging on (increases verbosity)
-   -c Path to config file (overrides default)
-   -t Sets target to work on
-   -f Execute updates without user prompt
-   -h Show this message
-   -v Output version of this script
+   -b buildNumber           Sets build to buildNumber specified
+   -d                       Turn debugging on (increases verbosity)
+   -c filePath              Path to config file (overrides default)
+   -p tagPrefix             String to prepend to generated commit tag
+   -e                       Sets tagPrefix to an empty string
+   -t targetName            Sets target to work on
+   -f                       Execute updates without user prompt
+   -h                       Show this message
+   -v                       Output version of this script
 
 EOF
 }
@@ -329,6 +335,8 @@ function promptConfirm() {
 # Our options:
 #   --build, b
 #   --config, c
+#   --prefix, p
+#   --empty-prefix, e
 #   --target, t
 #   --debug, d
 #   --force, f
@@ -340,12 +348,12 @@ getopt -T > /dev/null
 if [ $? -eq 4 ]; then
   # GNU enhanced getopt is available
   PROGNAME=`basename $0`
-  params="$(getopt --name "$PROGNAME" --long build:,config:,target:,force,help,version,debug --options b:c:t:fhvd -- "$@")"
+  params="$(getopt --name "$PROGNAME" --long build:,config:,prefix:,empty-prefix,target:,force,help,version,debug --options b:c:p:et:fhvd -- "$@")"
 else
   # Original getopt is available
   GETOPT_OLD=1
   PROGNAME=`basename $0`
-  params="$(getopt b:c:t:fhvd "$@")"
+  params="$(getopt b:c:p:et:fhvd "$@")"
 fi
 
 # check for invalid params passed; bail out if error is set.
@@ -361,6 +369,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -b | --build)           cli_BUILDNUM="$2"; shift;;
     -c | --config)          cli_CONFIGPATH="$2"; shift;;
+    -p | --prefix)          cli_TAG_PREFIX="$2"; shift;;
+    -e | --empty-prefix)    cli_EMPTYPREFIX=1; EMPTYPREFIX=${cli_EMPTYPREFIX};;
     -t | --target)          cli_TARGETNAME="$2"; shift;;
     -d | --debug)           cli_DEBUG=1; DEBUG=${cli_DEBUG};;
     -f | --force)           cli_FORCEEXEC=1;;
@@ -435,6 +445,7 @@ fi
 # Clean up config file parameters
 #
 cleanString TARGETNAME
+cleanString TAG_PREFIX
 cleanString BUILDNUM_START
 
 # Verify grep version
@@ -444,6 +455,7 @@ if [[ $(isGnuGrep "${PATH_GREP}") -ne 1 ]]; then
   echo
   exit 1
 fi
+echo
 
 # Rangle our vars
 #
@@ -479,6 +491,22 @@ fi
 if [ -n "${cli_TARGETNAME}" ]; then
   cleanString cli_TARGETNAME;
   TARGETNAME=${cli_TARGETNAME};
+fi
+
+# are both empty-prefix and prefix defined? bail out!
+if [ -n "${cli_TAG_PREFIX}" ] && [ "${EMPTYPREFIX}" -eq 1 ]; then
+  if [ ${GETOPT_OLD} -eq 1 ]; then
+    echo "ABORTING. The -p and -e options cannot be combined."
+  else
+    echo "ABORTING. The -p (prefix) and -e (empty-prefix) options cannot be combined."
+  fi
+  usage;
+  exit 1;
+elif [ -n "${cli_TAG_PREFIX}" ]; then
+  cleanString cli_TAG_PREFIX;
+  TAG_PREFIX=${cli_TAG_PREFIX};
+elif [ "${EMPTYPREFIX}" -eq 1 ]; then
+  TAG_PREFIX=""
 fi
 
 # bail out if minimum config isn't available
@@ -669,11 +697,14 @@ fi
 # ...
 #
 
-# create commit tag from BUILDVER and BUILDNUM
+# create commit tag from TAG_PREFIX, BUILDVER and BUILDNUM
 #
 # NOTE: man git-check-ref-format for valid characters
 #
 GIT_COMMIT_TAG=${BUILDVER}-${BUILDNUM}
+if [[ -n ${TAG_PREFIX} ]]; then
+  GIT_COMMIT_TAG=${TAG_PREFIX}-${GIT_COMMIT_TAG}
+fi
 
 RESP=$({ $PATH_GIT check-ref-format "xxx/${GIT_COMMIT_TAG}"; } 2>&1 )
 RSLT=$?
