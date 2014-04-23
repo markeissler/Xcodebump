@@ -38,6 +38,7 @@
 PATH_GIT="/usr/bin/git"
 PATH_CUT="/usr/bin/cut"
 PATH_HEAD="/usr/bin/head"
+PATH_FIND="/usr/bin/find"
 
 # Install gnu grep via homebrew... (this will not symlink for you)
 #
@@ -51,7 +52,7 @@ PATH_GREP="/usr/local/bin/ggrep"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.0.2
+VERSION=1.0.3
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -90,15 +91,16 @@ Update the marketing and build numbers for the xcode project. This script will
 grab the info from the command line or configuration file.
 
 OPTIONS:
-   -b, --build buildNumber  Sets build to buildNumber specified
-   -d, --debug              Turn debugging on (increases verbosity)
-   -c, --config filePath    Path to config file (overrides default)
-   -p, --prefix tagPrefix   String to prepend to generated commit tag
-   -e, --empty-prefix       Sets tagPrefix to an empty string
-   -t, --target targetName  Sets target to work on
-   -f, --force              Execute updates without user prompt
-   -h, --help               Show this message
-   -v, --version            Output version of this script
+   -b, --build buildNumber      Sets build to buildNumber specified
+   -d, --debug                  Turn debugging on (increases verbosity)
+   -c, --path-config cFilePath  Path to config file (overrides default)
+   -l, --path-plist iFilePath   Path to target Info.plist file (disables search)
+   -p, --prefix tagPrefix       String to prepend to generated commit tag
+   -e, --empty-prefix           Sets tagPrefix to an empty string
+   -t, --target targetName      Sets target to work on
+   -f, --force                  Execute updates without user prompt
+   -h, --help                   Show this message
+   -v, --version                Output version of this script
 
 EOF
 }
@@ -113,15 +115,16 @@ Update the marketing and build numbers for the xcode project. This script will
 grab the info from the command line or configuration file.
 
 OPTIONS:
-   -b buildNumber           Sets build to buildNumber specified
-   -d                       Turn debugging on (increases verbosity)
-   -c filePath              Path to config file (overrides default)
-   -p tagPrefix             String to prepend to generated commit tag
-   -e                       Sets tagPrefix to an empty string
-   -t targetName            Sets target to work on
-   -f                       Execute updates without user prompt
-   -h                       Show this message
-   -v                       Output version of this script
+   -b buildNumber               Sets build to buildNumber specified
+   -d                           Turn debugging on (increases verbosity)
+   -c cFilePath                 Path to config file (overrides default)
+   -l iFilePath                 Path to target Info.plist file (disables search)
+   -p tagPrefix                 String to prepend to generated commit tag
+   -e                           Sets tagPrefix to an empty string
+   -t targetName                Sets target to work on
+   -f                           Execute updates without user prompt
+   -h                           Show this message
+   -v                           Output version of this script
 
 EOF
 }
@@ -150,7 +153,9 @@ function version {
 #
 function cleanString {
   # remove quotes (leading or trailing, single or double)
-  if [ -n "${1}" ]; then
+  local t
+  eval t=\$${1}
+  if [ -n "${t}" ]; then
     # fetch name of variable passed in arg1
     _argVarName=\$${1}
     # get the current value of the variable
@@ -316,6 +321,19 @@ function isGnuGrep() {
   echo 1; return 0;
 }
 
+# findInfoPlist()
+#
+# Search the current directory for a TARGET-Info.plist file.
+#
+function findInfoPlist() {
+  _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+  if [[ -z ${_plistPath} || $? -ne 0 ]]; then
+    echo ""; return 1;
+  fi
+
+  echo ${_plistPath}; return 0
+}
+
 # promptConfirm()
 #
 # Confirm a user action. Input case insensitive.
@@ -334,7 +352,8 @@ function promptConfirm() {
 #
 # Our options:
 #   --build, b
-#   --config, c
+#   --path-config, c
+#   --path-plist, l
 #   --prefix, p
 #   --empty-prefix, e
 #   --target, t
@@ -348,12 +367,12 @@ getopt -T > /dev/null
 if [ $? -eq 4 ]; then
   # GNU enhanced getopt is available
   PROGNAME=`basename $0`
-  params="$(getopt --name "$PROGNAME" --long build:,config:,prefix:,empty-prefix,target:,force,help,version,debug --options b:c:p:et:fhvd -- "$@")"
+  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,target:,force,help,version,debug --options b:c:l:p:et:fhvd -- "$@")"
 else
   # Original getopt is available
   GETOPT_OLD=1
   PROGNAME=`basename $0`
-  params="$(getopt b:c:p:et:fhvd "$@")"
+  params="$(getopt b:c:l:p:et:fhvd "$@")"
 fi
 
 # check for invalid params passed; bail out if error is set.
@@ -368,7 +387,8 @@ unset params
 while [ $# -gt 0 ]; do
   case "$1" in
     -b | --build)           cli_BUILDNUM="$2"; shift;;
-    -c | --config)          cli_CONFIGPATH="$2"; shift;;
+    -c | --path-config)     cli_CONFIGPATH="$2"; shift;;
+    -l | --path-plist)      cli_PLISTPATH="$2"; shift;;
     -p | --prefix)          cli_TAG_PREFIX="$2"; shift;;
     -e | --empty-prefix)    cli_EMPTYPREFIX=1; EMPTYPREFIX=${cli_EMPTYPREFIX};;
     -t | --target)          cli_TARGETNAME="$2"; shift;;
@@ -431,9 +451,6 @@ echo
 echo "Reading config file..."
 echo
 
-# Add RVM to PATH for scripting
-# pathadd ${HOME}/.rvm/bin
-
 if [ -s "${PATH_CONFIG}" ]; then
   source "${PATH_CONFIG}" &> /dev/null
 else
@@ -447,6 +464,7 @@ fi
 cleanString TARGETNAME
 cleanString TAG_PREFIX
 cleanString BUILDNUM_START
+cleanString PATH_PLIST
 
 # Verify grep version
 echo "Checking for a compatible version of grep..."
@@ -509,6 +527,11 @@ elif [ "${EMPTYPREFIX}" -eq 1 ]; then
   TAG_PREFIX=""
 fi
 
+if [ -n "${cli_PLISTPATH}" ]; then
+  cleanString cli_PLISTPATH;
+  PATH_PLIST=${cli_PLISTPATH};
+fi
+
 # bail out if minimum config isn't available
 if [ -z "${TARGETNAME}" ] || [ -z "${BUILDNUM}" ] || [ -z "${BUILDVER}" ]; then
   usage
@@ -526,12 +549,19 @@ fi
 #
 
 # Grab info from plist
-PATH_PLIST="${TARGETNAME}-Info.plist"
-if [[ ! -w ${PATH_PLIST} ]]; then
+printf "Checking for TARGET-Info.plist file... "
+if [[ -z ${PATH_PLIST} ]]; then
+  # try to find plist if not specified explicitly
+  PATH_PLIST=$(findInfoPlist)
+fi
+
+if [[ -z ${PATH_PLIST} ]] || [[ ! -w ${PATH_PLIST} ]]; then
+  echo
   echo "ABORTING. Unable to open plist file: ${PATH_PLIST}"
   echo
   exit 1
 fi
+echo "Found: ${PATH_PLIST}"
 
 #
 # UPDATE CFBundleShortVersionString
