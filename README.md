@@ -29,12 +29,18 @@ You can also specify the target here so you won't have to supply it on the comma
 
 	TARGETNAME="MyProject"
 
+### Info.plist path
+Xcodebump will search the current directory for the appropriate Info.plist file based on the TARGETNAME using *find(1)*. Under some circumstances you may need to manually specify the path:
+
+	>sh ../.xcodebump.sh -l MyTarget/Info.plist 2.5.1
+	
 ### Script PATHs
-Verify paths to git, cut, head, grep:
+Verify paths to git, cut, head, find, grep:
 
 	PATH_GIT="/usr/local/bin/git"
 	PATH_CUT="/usr/bin/cut"
 	PATH_HEAD="/usr/bin/head"
+	PATH_FIND="/usr/bin/find"
 	PATH_GREP="/usr/local/bin/ggrep"
 	
 **WARNING: Make sure you point to the correct version of git installed on your machine.**
@@ -71,6 +77,9 @@ Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and bui
 	build-2.5.1-248
 	
 Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-".
+
+## Multiple Targets
+There is no specific support for projects with multiple targets at this time.
  
 ## Todo
 
