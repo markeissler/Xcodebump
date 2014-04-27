@@ -50,9 +50,19 @@ PATH_FIND="/usr/bin/find"
 #
 PATH_GREP="/usr/local/bin/ggrep"
 
+# Install gnu sed via homebrew... (this will not symlink for you)
+#
+# >brew tap homebrew/dupes
+# >brew install gnu-sed
+#
+# This will install the new sed as "gsed" to avoid any conflicts with the BSD
+# version of sed native to OSX.
+#
+PATH_SED="/usr/local/bin/gsed"
+
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.0.3
+VERSION=1.1.0
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -66,11 +76,22 @@ GETOPT_OLD=0
 TARGETNAME=""
 TAG_PREFIX="build"
 EMPTYPREFIX=0
+MAKERELEASE=0
 BUILDNUM=-1
 BUILDNUM_START=1
 BUILDVER=-1
 BUILDVER_START="1.0.0"
 PATH_PLIST=""
+
+# standard BSD sed is called by cleanString(); we will find this
+PATH_STD_SED=""
+
+# podspec support
+PATH_PODSPEC=""
+PODSPEC_URL=""
+PODSPEC_BRANCH_REL="master"
+PODSPEC_BRANCH_DEV="develop"
+UPDATEPODSPEC=0
 
 #
 # FUNCTIONS
@@ -97,10 +118,17 @@ OPTIONS:
    -l, --path-plist iFilePath   Path to target Info.plist file (disables search)
    -p, --prefix tagPrefix       String to prepend to generated commit tag
    -e, --empty-prefix           Sets tagPrefix to an empty string
+   -r, --release                Create a final release
    -t, --target targetName      Sets target to work on
+   -s, --path-podspec sFilePath Path to podspec file (disables search)
+   -u, --update-podspec         Update podspec file (for Cocoapod libraries)
+   -w, --url-podspec podspecUrl Podspec file source url
    -f, --force                  Execute updates without user prompt
    -h, --help                   Show this message
    -v, --version                Output version of this script
+
+NOTE: If Podspec file source url does not end with a ".git" file extension, the
+"targetName.git" string will be appended to the url.
 
 EOF
 }
@@ -121,10 +149,17 @@ OPTIONS:
    -l iFilePath                 Path to target Info.plist file (disables search)
    -p tagPrefix                 String to prepend to generated commit tag
    -e                           Sets tagPrefix to an empty string
+   -r                           Create a final release
    -t targetName                Sets target to work on
+   -s sFilePath                 Path to podspec file (disables search)
+   -u                           Update podspec file (for Cocoapod libraries)
+   -w podspecUrl                Podspec file source url
    -f                           Execute updates without user prompt
    -h                           Show this message
    -v                           Output version of this script
+
+NOTE: If Podspec file source url does not end with a ".git" file extension, the
+"targetName.git" string will be appended to the url.
 
 EOF
 }
@@ -161,9 +196,9 @@ function cleanString {
     # get the current value of the variable
     _argVarValue=`eval "expr ${_argVarName}"`
     # clean up the value (1) - remove leading/trailing quotes (single or double)
-    _argVarValue_Clean=$(echo ${_argVarValue} | sed "s/^[\'\"]//" |  sed "s/[\'\"]$//" );
+    _argVarValue_Clean=$(echo ${_argVarValue} | ${PATH_STD_SED} "s/^[\'\"]//" |  ${PATH_STD_SED} "s/[\'\"]$//" );
     # clean up the value (2) - convert encoded values to unencoded
-    _argVarValue_Clean=$(echo ${_argVarValue_Clean} |  sed 's@%3D@=@g' |  sed 's@%3A@:@g' | sed 's@%2F@\\/@g' );
+    _argVarValue_Clean=$(echo ${_argVarValue_Clean} |  ${PATH_STD_SED} 's@%3D@=@g' |  ${PATH_STD_SED} 's@%3A@:@g' | ${PATH_STD_SED} 's@%2F@\\/@g' );
 
     # assign the cleaned up value to the variable passed in arg1
     eval "${1}=\${_argVarValue_Clean}"
@@ -246,7 +281,7 @@ function semverToArray() {
     # get the current value of the variable
     _argVarValue=`eval "expr ${_argVarName}"`
     # clean up the value (1) - remove leading/trailing quotes (single or double)
-    _argVarValue_Clean=$(echo ${_argVarValue} | sed "s/^[\'\"]//" |  sed "s/[\'\"]$//" );
+    _argVarValue_Clean=$(echo ${_argVarValue} | ${PATH_SED} "s/^[\'\"]//" |  ${PATH_SED} "s/[\'\"]$//" );
 
     # split into array, parse on dot character
     array=(${_argVarValue_Clean//./ })
@@ -312,9 +347,27 @@ function isGnuGrep() {
     echo 0; return 1;
   fi
 
-  RESP=$({ ${1} -V | ${PATH_HEAD} -n 1; } 2>&1 )
+  RESP=$({ ${1} --version | ${PATH_HEAD} -n 1; } 2>&1 )
   RSLT=$?
   if [[ ! $RESP =~ "${1} (GNU grep)" ]]; then
+    echo 0; return 1;
+  fi
+
+  echo 1; return 0;
+}
+
+# isGnuSed()
+#
+# Checks for GNU Sed which supports case insensitive match and replace.
+#
+function isGnuSed() {
+  if [[ -z "${1}" ]]; then
+    echo 0; return 1;
+  fi
+
+  RESP=$({ ${1} --version | ${PATH_HEAD} -n 1; } 2>&1 )
+  RSLT=$?
+  if [[ ! $RESP =~ "${1} (GNU sed)" ]]; then
     echo 0; return 1;
   fi
 
@@ -332,6 +385,19 @@ function findInfoPlist() {
   fi
 
   echo ${_plistPath}; return 0
+}
+
+# findPodspec()
+#
+# Search the current directory for a TARGET.podspec file.
+#
+function findPodspec() {
+  _podspecPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}.podspec" -print0; } 2>&1 )
+  if [[ -z ${_podspecPath} || $? -ne 0 ]]; then
+    echo ""; return 1;
+  fi
+
+  echo ${_podspecPath}; return 0
 }
 
 # promptConfirm()
@@ -356,7 +422,11 @@ function promptConfirm() {
 #   --path-plist, l
 #   --prefix, p
 #   --empty-prefix, e
+#   --release, r
 #   --target, t
+#   --path-podspec, s
+#   --update-podspec, u
+#   --url-podspec, w
 #   --debug, d
 #   --force, f
 #   --help, h
@@ -367,12 +437,12 @@ getopt -T > /dev/null
 if [ $? -eq 4 ]; then
   # GNU enhanced getopt is available
   PROGNAME=`basename $0`
-  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,target:,force,help,version,debug --options b:c:l:p:et:fhvd -- "$@")"
+  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,release,target:,path-podspec:,update-podspec,url-podspec:,force,help,version,debug --options b:c:l:p:ert:s:uw:fhvd -- "$@")"
 else
   # Original getopt is available
   GETOPT_OLD=1
   PROGNAME=`basename $0`
-  params="$(getopt b:c:l:p:et:fhvd "$@")"
+  params="$(getopt b:c:l:p:ert:s:uw:fhvd "$@")"
 fi
 
 # check for invalid params passed; bail out if error is set.
@@ -391,7 +461,11 @@ while [ $# -gt 0 ]; do
     -l | --path-plist)      cli_PLISTPATH="$2"; shift;;
     -p | --prefix)          cli_TAG_PREFIX="$2"; shift;;
     -e | --empty-prefix)    cli_EMPTYPREFIX=1; EMPTYPREFIX=${cli_EMPTYPREFIX};;
+    -r | --release)         cli_MAKERELEASE=1; MAKERELEASE=${cli_MAKERELEASE};;
     -t | --target)          cli_TARGETNAME="$2"; shift;;
+    -s | --path-podspec)    cli_PODSPECPATH="$2"; shift;;
+    -u | --update-podspec)  cli_UPDATEPODSPEC=1; UPDATEPODSPEC=${cli_UPDATEPODSPEC};;
+    -w | --url-podspec)     cli_PODSPECURL="$2"; shift;;
     -d | --debug)           cli_DEBUG=1; DEBUG=${cli_DEBUG};;
     -f | --force)           cli_FORCEEXEC=1;;
     -v | --version)         version; exit;;
@@ -409,35 +483,25 @@ if [ -z "${1}" ]; then
   usage
   exit 1
 else
-  BUILDVER=$1
-  cleanString BUILDVER
-  # use BUILDVER for BUILDVER_START
-  BUILDVER_START=${BUILDVER};
-  # # make sure BUILDVER
-  # BUILDVER_ARRAY=${BUILDVER}
-  # semverToArray BUILDVER_ARRAY
-  # if [[ ${DEBUG} -ne 0 ]]; then
-  #   for elem in "${BUILDVER_ARRAY[@]}"
-  #   do
-  #     echo "${elem}"
-  #   done
-  # fi
-
-  # We should now check that the BUILDVER provided is in semVer format, if the
-  # array is empty, we can be pretty sure that it isn't. There should be three
-  # elements, and each shoudl be a number.
-  if [[ $(isSemver "${BUILDVER}") -eq 0 ]]; then
-    echo "ABORTING. You have specified a non-conforming releaseVersion. The"
-    echo "release version string should conform to SemVer (Semantic Versioning)"
-    echo "format."
-    exit 1
-  fi
+  cli_BUILDVER="${1}"
 fi
 
 if [ "${DEBUG}" -ne 0 ]; then
   echo "BUILDVER set from cli: ${BUILDVER}"
 fi
 
+# Configure std sed
+#
+if [[ -n "${PATH_SED}" ]] && [[ -x "${PATH_SED}" ]]; then
+  PATH_STD_SED="${PATH_SED}"
+elif [[ -x "/usr/bin/seds" ]]; then
+  PATH_STD_SED="/usr/bin/sed"
+else
+  echo
+  echo "FATAL. Something is wrong with this system. Unable to find standard sed."
+  echo
+  exit 1
+fi
 
 # Grab our config file path from the cli if provided
 #
@@ -448,32 +512,63 @@ fi
 
 # load config
 echo
-echo "Reading config file..."
-echo
-
+printf "Checking for a config file... "
 if [ -s "${PATH_CONFIG}" ]; then
   source "${PATH_CONFIG}" &> /dev/null
 else
+  printf "!!"
+  echo
   echo "ABORTING. The xcodebump config file ("${PATH_CONFIG}") is missing or empty!"
   echo
   exit 1
 fi
+echo "Found: ${PATH_CONFIG}"
+echo
+
+# Verify grep version
+printf "Checking for a compatible version of grep... "
+if [[ $(isGnuGrep "${PATH_GREP}") -eq 0 ]]; then
+  printf "!!"
+  echo
+  echo "ABORTING. Couldn't find a compatible version of grep. GNU grep is required."
+  echo
+  exit 1
+fi
+echo "Found: ${PATH_GREP}"
+echo
+
+# Verify sed version
+printf "Checking for a compatible version of sed... "
+if [[ $(isGnuSed "${PATH_SED}") -eq 0 ]]; then
+  printf "!!"
+  echo
+  echo "ABORTING. Couldn't find a compatible version of sed. GNU sed is required."
+  echo
+  exit 1
+fi
+echo "Found: ${PATH_SED}"
+echo
+# Update standard sed to configured value (maybe have been overriden in cfg)
+PATH_STD_SED="${PATH_SED}"
+
+##
+## SAFE TO CALL GNU GREP AND GNU SED FROM HERE ON IN!
+##
 
 # Clean up config file parameters
 #
 cleanString TARGETNAME
 cleanString TAG_PREFIX
+cleanString BUILDVER
+cleanString BUILDVER_START
+cleanString BUILDNUM
 cleanString BUILDNUM_START
 cleanString PATH_PLIST
+cleanString PATH_PODSPEC
+cleanString PODSPEC_URL
+cleanString PODSPEC_BRANCH_DEV
+cleanString PODSPEC_BRANCH_REL
 
-# Verify grep version
-echo "Checking for a compatible version of grep..."
-if [[ $(isGnuGrep "${PATH_GREP}") -ne 1 ]]; then
-  echo "ABORTING. Couldn't find a compatible version of grep. GNU grep is required."
-  echo
-  exit 1
-fi
-echo
 
 # Rangle our vars
 #
@@ -483,11 +578,35 @@ if [ -n "${cli_FORCEEXEC}" ]; then
   FORCEEXEC=${cli_FORCEEXEC};
 fi
 
+if [ -n "${cli_BUILDVER}" ]; then
+  # check that the BUILDVER provided is in semVer format
+  cleanString cli_BUILDVER
+  BUILDVER=${cli_BUILDVER}
+
+  if [[ $(isSemver "${BUILDVER}") -eq 0 ]]; then
+    echo "ABORTING. You have specified a non-conforming releaseVersion. The"
+    echo "release version string must conform to SemVer (Semantic Versioning)"
+    echo "format."
+    exit 1
+  fi
+fi
+
+if [ -n "${BUILDVER_START}" ]; then
+  if [[ $(isSemver "${BUILDVER_START}") -eq 0 ]]; then
+    echo "ABORTING. You have specified a non-conforming BUILDVER_START. The"
+    echo "BUILDVER_START string must conform to SemVer (Semantic Versioning)"
+    echo "format."
+    exit 1
+  fi
+else
+  # use BUILDVER for BUILDVER_START
+  BUILDVER_START=${BUILDVER};
+fi
+
 if [ -n "${cli_BUILDNUM}" ]; then
   cleanString cli_BUILDNUM;
   BUILDNUM=${cli_BUILDNUM};
-  # use cli_BUIILDNUM for BUILDNUM_START
-  BUILDNUM_START=${BUILDNUM};
+
   # if a number, buildnum must not be negative
   if [[ $(isNumber "${BUILDNUM}") -eq 1 ]] && [[ ${BUILDNUM} -lt 0 ]]; then
     echo "ABORTING. You have specified a Buildnum with a negative value!"
@@ -496,6 +615,9 @@ if [ -n "${cli_BUILDNUM}" ]; then
   # if a string, warn the user!
   if [[ $(isNumber "${BUILDNUM}") -eq 0 ]] && [[ ! -z ${BUILDNUM} ]]; then
     echo "WARNING. You have specificed a Buildnum that is a string."
+    ##
+    ## @TODO: Remove prompt for incorrect BUILDNUM
+    ##
     # prompt user for confirmation
     if [[ "no" == $(promptConfirm "Update CFBundleVersion key with a string?") || \
       "no" == $(promptConfirm "Are you *really* sure?") ]]
@@ -503,7 +625,36 @@ if [ -n "${cli_BUILDNUM}" ]; then
       echo "Aborting."
       exit 1
     fi
+    ##
+    ##
   fi
+fi
+
+if [ -n "${BUILDNUM_START}" ]; then
+  # if a number, buildnum must not be negative
+    if [[ $(isNumber "${BUILDNUM_START}") -eq 1 ]] && [[ ${BUILDNUM_START} -lt 0 ]]; then
+      echo "ABORTING. You have specified a Buildnum with a negative value!"
+      exit 1
+    fi
+    # if a string, warn the user!
+    if [[ $(isNumber "${BUILDNUM_START}") -eq 0 ]] && [[ ! -z ${BUILDNUM_START} ]]; then
+      echo "WARNING. You have specificed a BUILDNUM_START that is a string."
+      ##
+      ## @TODO: Remove prompt for incorrect BUILDNUM_START
+      ##
+      # prompt user for confirmation
+      if [[ "no" == $(promptConfirm "Update CFBundleVersion key with a string?") || \
+        "no" == $(promptConfirm "Are you *really* sure?") ]]
+      then
+        echo "Aborting."
+        exit 1
+      fi
+      ##
+      ##
+    fi
+else
+  # use BUIILDNUM for BUILDNUM_START
+  BUILDNUM_START=${BUILDNUM};
 fi
 
 if [ -n "${cli_TARGETNAME}" ]; then
@@ -532,6 +683,21 @@ if [ -n "${cli_PLISTPATH}" ]; then
   PATH_PLIST=${cli_PLISTPATH};
 fi
 
+if [ -n "${cli_PODSPECPATH}" ]; then
+  cleanString cli_PODSPECPATH;
+  PATH_PODSPEC=${cli_PODSPECPATH};
+fi
+
+if [ -n "${cli_PODSPECURL}" ]; then
+  cleanString cli_PODSPECURL;
+  PODSPEC_URL=${cli_PODSPECURL};
+  # if it doesn't end in .git, assume it is a base url
+  if [[ ! ${PODSPEC_URL} =~ ".git$" ]]; then
+    PODSPEC_URL=$(echo "${PODSPEC_URL}" | ${PATH_SED} -r "s|\/$||");
+    PODSPEC_URL="${PODSPEC_URL}/${TARGETNAME}.git";
+  fi
+fi
+
 # bail out if minimum config isn't available
 if [ -z "${TARGETNAME}" ] || [ -z "${BUILDNUM}" ] || [ -z "${BUILDVER}" ]; then
   usage
@@ -548,7 +714,7 @@ fi
 # Let's GO!
 #
 
-# Grab info from plist
+# Find plist
 printf "Checking for TARGET-Info.plist file... "
 if [[ -z ${PATH_PLIST} ]]; then
   # try to find plist if not specified explicitly
@@ -638,7 +804,6 @@ else
     exit 1
   fi
   echo "Updated CFBundleShortVersionString key value to: ${RESP}"
-  echo
 fi
 
 
@@ -712,7 +877,79 @@ else
     exit 1
   fi
   echo "Updated CFBundleVersion key value to: ${RESP}"
+fi
+
+#
+# Update podspec (if enabled)
+#
+if [[ "${UPDATEPODSPEC}" -ne 0 ]]; then
   echo
+  printf "Checking for TARGET.podspec file... "
+  if [[ -z ${PATH_PODSPEC} ]]; then
+    # try to find podspec if not specified explicitly
+    PATH_PODSPEC=$(findPodspec)
+  fi
+
+  if [[ -z ${PATH_PODSPEC} ]] || [[ ! -w ${PATH_PODSPEC} ]]; then
+    echo
+    echo "ABORTING. Unable to open podspec file: ${PATH_PODSPEC}"
+    echo
+    exit 1
+  fi
+  echo "Found: ${PATH_PODSPEC}"
+
+  #
+  # develop:
+  #   s.version = "2.7.3-b248"
+  #   s.source = { :git => 'https://github.com/markeissler/Reader.git', :branch => “develop", :tag => “2.7.3-b248” }
+  #
+  # release:
+  #   s.version = "2.7.3"
+  #   s.source = { :git => 'https://github.com/markeissler/Reader.git', :branch => "master", :tag => “2.7.3-f248” }
+  #
+  PODSPEC_TAG="${BUILDVER}-b${BUILDNUM}"
+  PODSPEC_VER="${PODSPEC_TAG}"
+  PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_DEV}', :tag => '${PODSPEC_TAG}' }"
+
+  if [[ "${MAKERELEASE}" -ne 0 ]]; then
+    PODSPEC_TAG="${BUILDVER}-f${BUILDNUM}"
+    PODSPEC_VER="${BUILDVER}"
+    PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_REL}', :tag => '${PODSPEC_TAG}' }"
+  fi
+
+  # make sure both s.version and s.source are present in the podspec file
+  RESP=$({ ${PATH_GREP} -ioP "version\s*=\s*[\'\"][0-9a-z\.\-]*[\'\"]$" ${PATH_PODSPEC}; } 2>&1 \
+    && { ${PATH_GREP} -ioP "source\s*=\s*{(.*)}$" ${PATH_PODSPEC}; } 2>&1)
+  RSLT=$?
+  if [[ ${RSLT} -ne 0 ]]; then
+    echo
+    echo "ABORTING. Either the Version line or Source line (or both) are missing from "
+    echo "podspec file: ${PATH_PODSPEC}"
+    echo
+    exit 1
+  fi
+
+  # update the s.version line
+  RESP=$({ ${PATH_SED} -i -r "s|(version\s*=\s*)[\'\"][0-9a-z\.\-]*[\'\"]$|\1\'${PODSPEC_VER}\'|gI" ${PATH_PODSPEC}; } 2>&1)
+  RSLT=$?
+  if [[ ${RSLT} -ne 0 ]]; then
+    echo
+    echo "ABORTING. Unable to update the Version line in podspec file: ${PATH_PODSPEC}"
+    echo
+    exit 1
+  fi
+  echo "Updated Version key value to: ${PODSPEC_VER}"
+
+  # update the s.source line
+  RESP=$({ ${PATH_SED} -i -r "s|(source\s*=\s*)\{(.*)\}$|\1${PODSPEC_SOURCE}|gI" ${PATH_PODSPEC}; } 2>&1)
+  RSLT=$?
+  if [[ ${RSLT} -ne 0 ]]; then
+    echo
+    echo "ABORTING. Unable to update the Version line in podspec file: ${PATH_PODSPEC}"
+    echo
+    exit 1
+  fi
+  echo "Updated Source key value to: ${PODSPEC_SOURCE}"
 fi
 
 #
@@ -731,9 +968,12 @@ fi
 #
 # NOTE: man git-check-ref-format for valid characters
 #
-GIT_COMMIT_TAG=${BUILDVER}-${BUILDNUM}
-if [[ -n ${TAG_PREFIX} ]]; then
-  GIT_COMMIT_TAG=${TAG_PREFIX}-${GIT_COMMIT_TAG}
+GIT_COMMIT_TAG="${BUILDVER}-b${BUILDNUM}"
+if [[ "${MAKERELEASE}" -ne 0 ]]; then
+  GIT_COMMIT_TAG="${BUILDVER}-f${BUILDNUM}"
+fi
+if [[ -n "${TAG_PREFIX}" ]]; then
+  GIT_COMMIT_TAG="${TAG_PREFIX}-${GIT_COMMIT_TAG}"
 fi
 
 RESP=$({ $PATH_GIT check-ref-format "xxx/${GIT_COMMIT_TAG}"; } 2>&1 )
@@ -764,7 +1004,7 @@ fi
 GIT_CURRENT_BRANCH=${RESP}
 
 # we need to escape GIT_CURRENT_BRANCH to use in a regex
-GIT_CURRENT_BRANCH_ESC=$( echo ${GIT_CURRENT_BRANCH} | sed -e 's/[\/&]/\\&/g' )
+GIT_CURRENT_BRANCH_ESC=$( echo ${GIT_CURRENT_BRANCH} | ${PATH_SED} -e 's/[\/&]/\\&/g' )
 
 # add all files and commit
 RESP=$({ $PATH_GIT add .; $PATH_GIT commit -am "Updated build to ${GIT_COMMIT_TAG}"; } 2>&1 )
