@@ -4,8 +4,11 @@ This script does the following:
 
 1. Update the Xcode marketing version string (CFBundleShortVersionString) to the releaseVersion supplied.
 2. Increment the Xcode build version (CFBundleVersion) to the buildNumber supplied or increment an existing number (extracted from the Info.plist).
-3. Commit changes to git.
-4. Generate a tag to identify the commit the release/build and tag the commit.
+3. Update an associated podspec file (for use when building distributable frameworks).
+4. Commit changes to git.
+5. Generate a tag to identify the commit the release/build and tag the commit.
+
+**NOTE:** Podspec support is under active development and therefore unstable.
 
 ## Why?
 
@@ -69,21 +72,66 @@ To get a list of supported command line flags and parameters:
 In general, options specified on the command line will override defaults and those found in the config file. There is one exception: if a value is set for tagPrefix in the config file, you can override the value from the command line as long as the override is not an empty string. To clear the tagPrefix, use the -e command line option.
 
 ## Release Version
-The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump: it's a feature, not a bug. In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle.
+The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump: it's a feature, not a bug. In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle. But with that said, support for incrementing the marketing version string will likely be added soon just for the convenience.
+
+When creating a release, you should specify the -r (release) flag, doing so changes the format of the git commit tag and also changes the format of the podspec version flag (see below). The commit tag will include the "r" ("release") character ahead of the build number:
+
+	build-2.5.1-r248
+
+The command would look like this:
+
+	>sh ./.xcodebump.sh -r 2.5.1
 
 ## Commit Tags
 Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and buildNumber. The format looks like this:
 
-	build-2.5.1-248
+	build-2.5.1-b248
 	
-Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-".
+Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-". The tagPrefix can be suppressed with the -e flag.
+
+	>sh ./.xcodedbump.sh -e 2.5.1
 
 ## Multiple Targets
-There is no specific support for projects with multiple targets at this time.
- 
-## Todo
+There is no specific support for projects with multiple targets at this time. Just run Xcodebump for each target separately.
 
-This version of Xcodebump expects that your target's Info.plist file is located in the top-level of your project. This limitation will be fixed shortly.
+## Podspec Support
+Preliminary support for updating a podspec file is under development. This is very much a moving target right now. Current support includes updating the version and source strings in a podspec file, but this requires that the podspec file follows a specific (more or less "common") format.
+
+To update a podspec file, specify the -u (update-podspec) flag and the -w (url-podspec) flag at a minimum. The name of the podspec file will be assumed to be "TARGET.podspec" and the current directory will be searched. You can also specify a path to the podspec explicitly with the -s (path-podspec) flag.
+
+	>sh ./.xcodebump.sh -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+
+In the above example, the user supplied a base url, in which case the "TARGET.git" string would be appended. You can also specify the entire url. The above command will result in the following changes:
+
+	TARGET.plist
+		CFBundleShortVersionString:	 2.5.1-bXXX
+		CFBundleVersion: 2.5.1-bXXX
+		
+	TARGET.podspec
+		s.version = '2.5.1-bXXX'
+		s.source: { :git => 'https://github.com/USERNAME/TARGET.git', 
+			:branch => 'develop', :tag => '2.5.1-bXXX' }
+		
+	Where XXX is a build number. Note that the tagPrefix has been suppressed.
+
+Running the command for a release like this:
+
+	>sh ./.xcodebump.sh -r -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+
+Will result in the following changes:
+
+	TARGET.plist
+		CFBundleShortVersionString:	 2.5.1
+		CFBundleVersion: 2.5.1-rXXX
+		
+	TARGET.podspec
+		s.version = '2.5.1'
+		s.source: { :git => 'https://github.com/USERNAME/TARGET.git', 
+			:branch => 'master', :tag => '2.5.1-rXXX' }
+		
+	Where XXX is a build number. Note that the tagPrefix has been suppressed.
+
+The dash and build number sequence are only included for non-release builds because SemVer format associates this pattern with "pre-release" version strings.
 
 ## Bugs and such
 
