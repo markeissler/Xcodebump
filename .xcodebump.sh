@@ -957,7 +957,7 @@ if [[ "${UPDATEPODSPEC}" -ne 0 ]]; then
   PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_DEV}', :tag => '${PODSPEC_TAG}' }"
 
   if [[ "${MAKERELEASE}" -ne 0 ]]; then
-    PODSPEC_TAG="${BUILDVER}-f${BUILDNUM}"
+    PODSPEC_TAG="${BUILDVER}-r${BUILDNUM}"
     PODSPEC_VER="${BUILDVER}"
     PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_REL}', :tag => '${PODSPEC_TAG}' }"
   fi
@@ -1015,7 +1015,7 @@ fi
 #
 GIT_COMMIT_TAG="${BUILDVER}-b${BUILDNUM}"
 if [[ "${MAKERELEASE}" -ne 0 ]]; then
-  GIT_COMMIT_TAG="${BUILDVER}-f${BUILDNUM}"
+  GIT_COMMIT_TAG="${BUILDVER}-r${BUILDNUM}"
 fi
 if [[ -n "${TAG_PREFIX}" ]]; then
   GIT_COMMIT_TAG="${TAG_PREFIX}-${GIT_COMMIT_TAG}"
