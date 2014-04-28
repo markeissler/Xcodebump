@@ -719,7 +719,7 @@ fi
 
 # bail out if invalid BUILDNUM_START found
 if [ -z "${BUILDNUM_START}" ]; then
-  echo "ABORTING. Invalid or missing value for BUILDNUM_START in conif file."
+  echo "ABORTING. Invalid or missing value for BUILDNUM_START in config file."
   exit 1
 fi
 
