@@ -62,7 +62,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.0
+VERSION=1.1.1
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -609,12 +609,12 @@ if [ -n "${cli_BUILDNUM}" ]; then
 
   # if a number, buildnum must not be negative
   if [[ $(isNumber "${BUILDNUM}") -eq 1 ]] && [[ ${BUILDNUM} -lt 0 ]]; then
-    echo "ABORTING. You have specified a Buildnum with a negative value!"
+    echo "ABORTING. You have specified a buildNumber with a negative value!"
     exit 1
   fi
   # if a string, warn the user!
   if [[ $(isNumber "${BUILDNUM}") -eq 0 ]] && [[ ! -z ${BUILDNUM} ]]; then
-    echo "WARNING. You have specificed a Buildnum that is a string."
+    echo "WARNING. You have specificed a buildNumber that is a string."
     ##
     ## @TODO: Remove prompt for incorrect BUILDNUM
     ##
@@ -662,6 +662,19 @@ if [ -n "${cli_TARGETNAME}" ]; then
   TARGETNAME=${cli_TARGETNAME};
 fi
 
+# if release flag is on then buildnum must be specified as well!
+if [ "${MAKERELEASE}" -eq 1 ] && [ -z "${cli_BUILDNUM}" ]; then
+  if [ ${GETOPT_OLD} -eq 1 ]; then
+    echo "ABORTING. To promote a build to release using the -r option, you must also"
+    echo "identify a buildNumber with the -b option."
+  else
+    echo "ABORTING. To promote a build to release using the -r (release) option, you"
+    echo "must identify a buildNumber with the -b (build) option."
+  fi
+  echo; usage;
+  exit 1;
+fi
+
 # are both empty-prefix and prefix defined? bail out!
 if [ -n "${cli_TAG_PREFIX}" ] && [ "${EMPTYPREFIX}" -eq 1 ]; then
   if [ ${GETOPT_OLD} -eq 1 ]; then
@@ -669,7 +682,7 @@ if [ -n "${cli_TAG_PREFIX}" ] && [ "${EMPTYPREFIX}" -eq 1 ]; then
   else
     echo "ABORTING. The -p (prefix) and -e (empty-prefix) options cannot be combined."
   fi
-  usage;
+  echo; usage;
   exit 1;
 elif [ -n "${cli_TAG_PREFIX}" ]; then
   cleanString cli_TAG_PREFIX;
@@ -700,13 +713,13 @@ fi
 
 # bail out if minimum config isn't available
 if [ -z "${TARGETNAME}" ] || [ -z "${BUILDNUM}" ] || [ -z "${BUILDVER}" ]; then
-  usage
+  echo; usage;
   exit 1
 fi
 
 # bail out if invalid BUILDNUM_START found
 if [ -z "${BUILDNUM_START}" ]; then
-  echo "ABORTING. Invalid or missing value for BUILDNUM_START in conif file."
+  echo "ABORTING. Invalid or missing value for BUILDNUM_START in config file."
   exit 1
 fi
 
@@ -734,6 +747,22 @@ echo "Found: ${PATH_PLIST}"
 #
 RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleShortVersionString" "${PATH_PLIST}"; } 2>&1 )
 RSLT=$?
+if [[ "${MAKERELEASE}" -eq 1 ]] && [[ "${RESP}" != "${BUILDVER}" ]]; then
+  # release flag is on but specified BUILDVER and found BUILDVER differ
+  if [[ $RESP =~ "Print: Entry, \"CFBundleShortVersionString\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
+    echo "CFBundleShortVersionString key not found in plist file."
+  else
+    echo "CFBundleShortVersionString key found in plist file: ${RESP}"
+    echo
+  fi
+  echo
+  echo "ABORTING. To promote a build to a release, the specified releaseVersion"
+  echo "and the existing CFBundleShortVersionString must be the same value. You"
+  echo "should run ${PROGNAME} first without the release option."
+  echo
+  exit 1
+fi
+
 if [[ $RESP =~ "Print: Entry, \"CFBundleShortVersionString\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
   #
   # Need to add a CFBundleShortVersionString key to plist
@@ -812,6 +841,22 @@ fi
 #
 RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleVersion" "${PATH_PLIST}"; } 2>&1 )
 RSLT=$?
+if [[ "${MAKERELEASE}" -eq 1 ]] && [[ "${RESP}" != "${BUILDNUM}" ]]; then
+  # release flag is on but specified BUILDNUM and found BUILDNUM differ
+  if [[ $RESP =~ "Print: Entry, \"CFBundleVersion\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
+    echo "CFBundleVersion key not found in plist file."
+  else
+    echo "CFBundleVersion key found in plist file: ${RESP}"
+    echo
+  fi
+  echo
+  echo "ABORTING. To promote a build to a release, the specified buildNumber"
+  echo "and the existing CFBundleVersion must be the same value. You should"
+  echo "run ${PROGNAME} first without the release option."
+  echo
+  exit 1
+fi
+
 if [[ $RESP =~ "Print: Entry, \"CFBundleVersion\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
   #
   # Need to add a CFBundleVersion key to plist
@@ -912,7 +957,7 @@ if [[ "${UPDATEPODSPEC}" -ne 0 ]]; then
   PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_DEV}', :tag => '${PODSPEC_TAG}' }"
 
   if [[ "${MAKERELEASE}" -ne 0 ]]; then
-    PODSPEC_TAG="${BUILDVER}-f${BUILDNUM}"
+    PODSPEC_TAG="${BUILDVER}-r${BUILDNUM}"
     PODSPEC_VER="${BUILDVER}"
     PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_REL}', :tag => '${PODSPEC_TAG}' }"
   fi
@@ -970,7 +1015,7 @@ fi
 #
 GIT_COMMIT_TAG="${BUILDVER}-b${BUILDNUM}"
 if [[ "${MAKERELEASE}" -ne 0 ]]; then
-  GIT_COMMIT_TAG="${BUILDVER}-f${BUILDNUM}"
+  GIT_COMMIT_TAG="${BUILDVER}-r${BUILDNUM}"
 fi
 if [[ -n "${TAG_PREFIX}" ]]; then
   GIT_COMMIT_TAG="${TAG_PREFIX}-${GIT_COMMIT_TAG}"
@@ -982,9 +1027,24 @@ if [[ ${RSLT} -ne 0 ]]; then
   #
   # GIT_COMMIT_TAG is an invalid git refname.
   #
-  echo "The generated git commit tag is invalid: ${GIT_COMMIT_TAG}."
+  echo "ABORTING. The generated git commit tag is invalid: ${GIT_COMMIT_TAG}"
+  echo "Consider revising the specified releaseVersion and/or buildNumber."
   echo
-  echo "ABORTING. Consider revising the specified releaseVersion and/or Buildnum."
+  exit 1
+fi
+
+# make sure GIT_COMMIT_TAG doesn't conflict with an existing tag in the repo
+RESP=$({ $PATH_GIT rev-parse "${GIT_COMMIT_TAG}"; } 2>&1 )
+RSLT=$?
+echo $RSLT
+if [[ ${RSLT} -ne 128 ]]; then
+  #
+  # GIT_COMMIT_TAG already exists
+  #
+  echo "ABORTING. The generated git commit tag already exists: ${GIT_COMMIT_TAG}"
+  echo "                                               commit: ${RESP}"
+  echo
+  echo "Consider revising the specified releaseVersion and/or buildNumber."
   echo
   exit 1
 fi
