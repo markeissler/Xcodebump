@@ -11,8 +11,12 @@
 # 3. Commit changes to git.
 # 4. Generate a tag to identify the commit the release/build and tag the commit.
 #
-# Dependency: Gnu Grep is required to support PCRE regex. On OSX you will have
-# to install this version of grep. Use homebrew. See instructions below.
+# Dependencies:
+# - Gnu Grep is required to support PCRE regex. On OSX you will have to install
+#   this version of grep. Use homebrew. See instructions below.
+#
+# - Gnu Sed is required to support case insensitive match/replace. On OSX you
+#   will have to install this version sed. Use homebrew. See instructions below.
 #
 
 # Copyright (c) 2014 Mark Eissler
