@@ -66,7 +66,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.1
+VERSION=1.1.2
 PROGNAME=`basename $0`
 
 # standard config file location
