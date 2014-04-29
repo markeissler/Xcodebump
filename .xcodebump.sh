@@ -11,8 +11,12 @@
 # 3. Commit changes to git.
 # 4. Generate a tag to identify the commit the release/build and tag the commit.
 #
-# Dependency: Gnu Grep is required to support PCRE regex. On OSX you will have
-# to install this version of grep. Use homebrew. See instructions below.
+# Dependencies:
+# - Gnu Grep is required to support PCRE regex. On OSX you will have to install
+#   this version of grep. Use homebrew. See instructions below.
+#
+# - Gnu Sed is required to support case insensitive match/replace. On OSX you
+#   will have to install this version sed. Use homebrew. See instructions below.
 #
 
 # Copyright (c) 2014 Mark Eissler
@@ -62,7 +66,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.0
+VERSION=1.1.1
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -72,6 +76,7 @@ PATH_PLIST_BUDDY="/usr/libexec/PlistBuddy"
 # reset internal vars (do not touch these here)
 DEBUG=0
 FORCEEXEC=0
+FETCHINFO=0
 GETOPT_OLD=0
 TARGETNAME=""
 TAG_PREFIX="build"
@@ -123,6 +128,7 @@ OPTIONS:
    -s, --path-podspec sFilePath Path to podspec file (disables search)
    -u, --update-podspec         Update podspec file (for Cocoapod libraries)
    -w, --url-podspec podspecUrl Podspec file source url
+   -i, --info                   Show keys/values from Info.plist and podspec
    -f, --force                  Execute updates without user prompt
    -h, --help                   Show this message
    -v, --version                Output version of this script
@@ -155,6 +161,7 @@ OPTIONS:
    -u                           Update podspec file (for Cocoapod libraries)
    -w podspecUrl                Podspec file source url
    -f                           Execute updates without user prompt
+   -i                           Show keys/values from Info.plist and podspec
    -h                           Show this message
    -v                           Output version of this script
 
@@ -194,7 +201,7 @@ function cleanString {
     # fetch name of variable passed in arg1
     _argVarName=\$${1}
     # get the current value of the variable
-    _argVarValue=`eval "expr ${_argVarName}"`
+    _argVarValue=`eval "expr \"${_argVarName}\""`
     # clean up the value (1) - remove leading/trailing quotes (single or double)
     _argVarValue_Clean=$(echo ${_argVarValue} | ${PATH_STD_SED} "s/^[\'\"]//" |  ${PATH_STD_SED} "s/[\'\"]$//" );
     # clean up the value (2) - convert encoded values to unencoded
@@ -400,6 +407,209 @@ function findPodspec() {
   echo ${_podspecPath}; return 0
 }
 
+# readInfoPlist()
+#
+# Read keys/values from the Info.plist passed by string in arg1, and write back
+# as a new string-coded hash in the variable referenced by arg2.
+#
+# Call like this:
+#
+#   readInfoPlist plistPathStr, plistArray
+#
+# The resulting array is string-coded like this:
+#
+#   array=( \
+#     "cfBundleShortVersionString=>'value'" \
+#     "cfBundleVersion=>'value'" \
+#   ")
+#
+function readInfoPlist() {
+  local _cfBundleShortVersionString
+  local _cfBundleVersion
+  local _array=()
+  local _length
+
+  if [[ -z "${1}" ]] || [[ ! -r "${1}" ]]; then
+    _array=( "error=>'Not found'" )
+  elif [[ -n "${2}" ]]; then
+    # fetch name of variable passed in arg1
+    _argVarName=\$${2}
+
+    _cfBundleShortVersionString=$({ $PATH_PLIST_BUDDY -c "Print CFBundleShortVersionString" "${1}"; } 2>&1 )
+    if [[ $? -ne 0 ]]; then
+      _cfBundleShortVersionString="";
+    fi
+    _cfBundleVersion=$({ $PATH_PLIST_BUDDY -c "Print CFBundleVersion" "${1}"; } 2>&1 )
+    if [[ $? -ne 0 ]]; then
+      _cfBundleVersion="";
+    fi
+
+    _array=( \
+      "cfBundleShortVersionString=>'${_cfBundleShortVersionString}'" \
+      "cfBundleVersion=>${_cfBundleVersion}" \
+    )
+  fi
+
+  length=${#_array[*]}
+  for ((i=0; i<=$(($length -1)); i++))
+  do
+    eval "${2}[$i]=\"${_array[$i]}\""
+  done
+}
+
+# showInfoPlist()
+#
+# Show keys/values from the Info.plist passed by string in arg1.
+#
+# Call like this:
+#
+#   showInfoPlist plistPathStr
+#
+function showInfoPlist() {
+  local _cfBundleShortVersionString
+  local _cfBundleVersion
+  _plistInfo=()
+  readInfoPlist "${1}" _plistInfo
+
+  if [[ ${#_plistInfo[@]} -gt 0 ]]; then
+
+    # declare -a hash=("${_plistInfo[@]}")
+    # for elem in "${hash[@]}"
+    for elem in "${_plistInfo[@]}"
+    do
+      if [ "${DEBUG}" -ne 0 ]; then
+        echo "Key: ${elem%%=>*}"
+        echo "Value: ${elem#*=>}"
+      fi
+
+      local key=${elem%%=>*}
+      local val=${elem#*=>}
+
+      case "${key}" in
+        cfBundleShortVersionString)     _cfBundleShortVersionString="${val}";;
+        cfBundleVersion)                _cfBundleVersion="${val}";;
+        error)                          # format errors
+                                        local _val=${val};
+                                        cleanString _val;
+                                        echo "Plist Error: ${_val}";
+                                        ;;
+        *)                              ;;
+      esac
+    done
+  fi
+
+  if [[ -n ${_cfBundleShortVersionString} ]]; then
+    cleanString _cfBundleShortVersionString
+    echo "Plist CFBundleShortVersionString: ${_cfBundleShortVersionString}"
+  fi
+
+  if [[ -n ${_cfBundleVersion} ]]; then
+    cleanString _cfBundleVersion
+    echo "Plist CFBundleVersion:            ${_cfBundleVersion}"
+  fi
+}
+
+# readPodspec()
+#
+# Read keys/values from the Target.podspec passed by string in arg1, and write
+# back as a new string-coded hash in the variable referenced by arg2.
+#
+# Call like this:
+#
+#   readPodspec podspecPathStr, podspecArray
+#
+# The resulting array is string-coded like this:
+#
+#   array=( \
+#     "version=>'value'" \
+#     "source=>'value'" \
+#   ")
+#
+function readPodspec() {
+  local _podspecVersion
+  local _podspecSource
+  local _array=()
+  local _length
+
+  if [[ -z "${1}" ]] || [[ ! -r "${1}" ]]; then
+    _array=( "error=>'Not found'" )
+  elif [[ -n "${2}" ]]; then
+    # fetch name of variable passed in arg1
+    _argVarName=\$${2}
+
+    _podspecVersion=$({ ${PATH_SED} -n -r "s|.*version\s*=\s*[\'\"]([0-9a-z\.\-]*)[\'\"]$|\1|gIp" ${1}; } 2>&1)
+    if [[ $? -ne 0 ]]; then
+      _podspecVersion="";
+    fi
+    _podspecSource=$({ ${PATH_SED} -n -r "s|.*source\s*=\s*(\{(.*)\})$|\1|gIp" ${1}; } 2>&1)
+    if [[ $? -ne 0 ]]; then
+      _podspecSource="";
+    fi
+
+    _array=( \
+      "version=>'${_podspecVersion}'" \
+      "source=>${_podspecSource}" \
+    )
+  fi
+
+  length=${#_array[*]}
+  for ((i=0; i<=$(($length -1)); i++))
+  do
+    eval "${2}[$i]=\"${_array[$i]}\""
+  done
+}
+
+# showPodspec()
+#
+# Show keys/values from the Target.podspec passed by string in arg1.
+#
+# Call like this:
+#
+#   showPodspec podspecPathStr
+#
+function showPodspec() {
+  local _podspecVersion
+  local _podspecSource
+  _podInfo=()
+  readPodspec "${1}" _podInfo
+
+  if [[ ${#_podInfo[@]} -gt 0 ]]; then
+
+    # declare -a hash=("${_podInfo[@]}")
+    # for elem in "${hash[@]}"
+    for elem in "${_podInfo[@]}"
+    do
+      if [ "${DEBUG}" -ne 0 ]; then
+        echo "Key: ${elem%%=>*}"
+        echo "Value: ${elem#*=>}"
+      fi
+
+      local key=${elem%%=>*}
+      local val=${elem#*=>}
+
+      case "${key}" in
+        version)                        _podspecVersion="${val}";;
+        source)                         _podspecSource="${val}";;
+        error)                          # format errors
+                                        local _val=${val};
+                                        cleanString _val;
+                                        echo "Podspec Error: ${_val}";
+                                        ;;
+        *)                              ;;
+      esac
+    done
+  fi
+
+  if [[ -n ${_podspecVersion} ]]; then
+    cleanString _podspecVersion
+    echo "Podspec Version:                  ${_podspecVersion}"
+  fi
+
+  if [[ -n ${_podspecSource} ]]; then
+    echo "Podspec Source:                   ${_podspecSource}"
+  fi
+}
+
 # promptConfirm()
 #
 # Confirm a user action. Input case insensitive.
@@ -429,6 +639,7 @@ function promptConfirm() {
 #   --url-podspec, w
 #   --debug, d
 #   --force, f
+#   --info, i
 #   --help, h
 #   --version, v
 #
@@ -437,12 +648,12 @@ getopt -T > /dev/null
 if [ $? -eq 4 ]; then
   # GNU enhanced getopt is available
   PROGNAME=`basename $0`
-  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,release,target:,path-podspec:,update-podspec,url-podspec:,force,help,version,debug --options b:c:l:p:ert:s:uw:fhvd -- "$@")"
+  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,release,target:,path-podspec:,update-podspec,url-podspec:,force,info,help,version,debug --options b:c:l:p:ert:s:uw:fihvd -- "$@")"
 else
   # Original getopt is available
   GETOPT_OLD=1
   PROGNAME=`basename $0`
-  params="$(getopt b:c:l:p:ert:s:uw:fhvd "$@")"
+  params="$(getopt b:c:l:p:ert:s:uw:fihvd "$@")"
 fi
 
 # check for invalid params passed; bail out if error is set.
@@ -468,6 +679,7 @@ while [ $# -gt 0 ]; do
     -w | --url-podspec)     cli_PODSPECURL="$2"; shift;;
     -d | --debug)           cli_DEBUG=1; DEBUG=${cli_DEBUG};;
     -f | --force)           cli_FORCEEXEC=1;;
+    -i | --info)            cli_FETCHINFO=1; FETCHINFO=${cli_FETCHINFO};;
     -v | --version)         version; exit;;
     -h | --help)            usage; exit;;
     --)                     shift; break;;
@@ -475,19 +687,21 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-# Grab final argument (the release version aka BUILDVER)
-shift $((OPTIND-1))
-if [ -z "${1}" ]; then
-  echo "ABORTING. You must specify a releaseVersion string."
-  echo
-  usage
-  exit 1
-else
-  cli_BUILDVER="${1}"
-fi
+if [ "${FETCHINFO}" -eq 0 ]; then
+  # Grab final argument (the release version aka BUILDVER)
+  shift $((OPTIND-1))
+  if [ -z "${1}" ]; then
+    echo "ABORTING. You must specify a releaseVersion string."
+    echo
+    usage
+    exit 1
+  else
+    cli_BUILDVER="${1}"
+  fi
 
-if [ "${DEBUG}" -ne 0 ]; then
-  echo "BUILDVER set from cli: ${BUILDVER}"
+  if [ "${DEBUG}" -ne 0 ]; then
+    echo "BUILDVER set from cli: ${BUILDVER}"
+  fi
 fi
 
 # Configure std sed
@@ -569,8 +783,38 @@ cleanString PODSPEC_URL
 cleanString PODSPEC_BRANCH_DEV
 cleanString PODSPEC_BRANCH_REL
 
+# Rangle our vars (EARLY)
+#
+# We need TARGETNAME, and possibly PLISTPATH and PODSPECPATH before we run
+# FETCHINFO calls.
+#
+if [ -n "${cli_TARGETNAME}" ]; then
+  cleanString cli_TARGETNAME;
+  TARGETNAME=${cli_TARGETNAME};
+fi
 
-# Rangle our vars
+if [ -n "${cli_PLISTPATH}" ]; then
+  cleanString cli_PLISTPATH;
+  PATH_PLIST=${cli_PLISTPATH};
+fi
+
+if [ -n "${cli_PODSPECPATH}" ]; then
+  cleanString cli_PODSPECPATH;
+  PATH_PODSPEC=${cli_PODSPECPATH};
+fi
+
+##
+## IF FETCHINFO IS ON, SHOW INFO AND QUIT!
+##
+if [ "${FETCHINFO}" -eq 1 ]; then
+  echo "Showing current values..."
+  showInfoPlist "${PATH_PLIST}"
+  showPodspec "${PATH_PODSPEC}"
+  exit 0
+fi
+
+
+# Rangle our vars (LATER)
 #
 # The cli_VARS will override config file vars!!
 #
@@ -609,12 +853,12 @@ if [ -n "${cli_BUILDNUM}" ]; then
 
   # if a number, buildnum must not be negative
   if [[ $(isNumber "${BUILDNUM}") -eq 1 ]] && [[ ${BUILDNUM} -lt 0 ]]; then
-    echo "ABORTING. You have specified a Buildnum with a negative value!"
+    echo "ABORTING. You have specified a buildNumber with a negative value!"
     exit 1
   fi
   # if a string, warn the user!
   if [[ $(isNumber "${BUILDNUM}") -eq 0 ]] && [[ ! -z ${BUILDNUM} ]]; then
-    echo "WARNING. You have specificed a Buildnum that is a string."
+    echo "WARNING. You have specificed a buildNumber that is a string."
     ##
     ## @TODO: Remove prompt for incorrect BUILDNUM
     ##
@@ -657,9 +901,17 @@ else
   BUILDNUM_START=${BUILDNUM};
 fi
 
-if [ -n "${cli_TARGETNAME}" ]; then
-  cleanString cli_TARGETNAME;
-  TARGETNAME=${cli_TARGETNAME};
+# if release flag is on then buildnum must be specified as well!
+if [ "${MAKERELEASE}" -eq 1 ] && [ -z "${cli_BUILDNUM}" ]; then
+  if [ ${GETOPT_OLD} -eq 1 ]; then
+    echo "ABORTING. To promote a build to release using the -r option, you must also"
+    echo "identify a buildNumber with the -b option."
+  else
+    echo "ABORTING. To promote a build to release using the -r (release) option, you"
+    echo "must identify a buildNumber with the -b (build) option."
+  fi
+  echo; usage;
+  exit 1;
 fi
 
 # are both empty-prefix and prefix defined? bail out!
@@ -669,23 +921,13 @@ if [ -n "${cli_TAG_PREFIX}" ] && [ "${EMPTYPREFIX}" -eq 1 ]; then
   else
     echo "ABORTING. The -p (prefix) and -e (empty-prefix) options cannot be combined."
   fi
-  usage;
+  echo; usage;
   exit 1;
 elif [ -n "${cli_TAG_PREFIX}" ]; then
   cleanString cli_TAG_PREFIX;
   TAG_PREFIX=${cli_TAG_PREFIX};
 elif [ "${EMPTYPREFIX}" -eq 1 ]; then
   TAG_PREFIX=""
-fi
-
-if [ -n "${cli_PLISTPATH}" ]; then
-  cleanString cli_PLISTPATH;
-  PATH_PLIST=${cli_PLISTPATH};
-fi
-
-if [ -n "${cli_PODSPECPATH}" ]; then
-  cleanString cli_PODSPECPATH;
-  PATH_PODSPEC=${cli_PODSPECPATH};
 fi
 
 if [ -n "${cli_PODSPECURL}" ]; then
@@ -700,13 +942,13 @@ fi
 
 # bail out if minimum config isn't available
 if [ -z "${TARGETNAME}" ] || [ -z "${BUILDNUM}" ] || [ -z "${BUILDVER}" ]; then
-  usage
+  echo; usage;
   exit 1
 fi
 
 # bail out if invalid BUILDNUM_START found
 if [ -z "${BUILDNUM_START}" ]; then
-  echo "ABORTING. Invalid or missing value for BUILDNUM_START in conif file."
+  echo "ABORTING. Invalid or missing value for BUILDNUM_START in config file."
   exit 1
 fi
 
@@ -728,12 +970,30 @@ if [[ -z ${PATH_PLIST} ]] || [[ ! -w ${PATH_PLIST} ]]; then
   exit 1
 fi
 echo "Found: ${PATH_PLIST}"
+echo
 
 #
 # UPDATE CFBundleShortVersionString
 #
 RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleShortVersionString" "${PATH_PLIST}"; } 2>&1 )
 RSLT=$?
+if [[ "${MAKERELEASE}" -eq 1 ]] && [[ "${RESP}" != "${BUILDVER}" ]]; then
+  # release flag is on but specified BUILDVER and found BUILDVER differ
+  if [[ $RESP =~ "Print: Entry, \"CFBundleShortVersionString\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
+    echo "CFBundleShortVersionString key not found in plist file."
+  else
+    echo "CFBundleShortVersionString key found in plist file: ${RESP}"
+  fi
+  echo
+  echo "ABORTING. To promote a build to a release, the specified releaseVersion"
+  echo "and the existing CFBundleShortVersionString must be the same value. You"
+  echo "should run ${PROGNAME} first without the release option."
+  echo
+  echo "Showing current values..."
+  showInfoPlist "${PATH_PLIST}"
+  exit 1
+fi
+
 if [[ $RESP =~ "Print: Entry, \"CFBundleShortVersionString\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
   #
   # Need to add a CFBundleShortVersionString key to plist
@@ -756,6 +1016,7 @@ if [[ $RESP =~ "Print: Entry, \"CFBundleShortVersionString\", Does Not Exist" ||
   RESP=$({ $PATH_PLIST_BUDDY -c "Set CFBundleShortVersionString ${BUILDVER_START}" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to add CFBundleShortVersionString key to plist file."
     echo "Not sure what the problem is."
     echo
@@ -787,6 +1048,7 @@ else
   RESP=$({ $PATH_PLIST_BUDDY -c "Set CFBundleShortVersionString ${BUILDVER}" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to update CFBundleShortVersionString key in plist file."
     echo "Not sure what the problem is."
     echo
@@ -797,6 +1059,7 @@ else
   RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleShortVersionString" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to verify updated CFBundleShortVersionString key in"
     echo "plist file."
     echo "Not sure what the problem is."
@@ -812,6 +1075,23 @@ fi
 #
 RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleVersion" "${PATH_PLIST}"; } 2>&1 )
 RSLT=$?
+if [[ "${MAKERELEASE}" -eq 1 ]] && [[ "${RESP}" != "${BUILDNUM}" ]]; then
+  # release flag is on but specified BUILDNUM and found BUILDNUM differ
+  if [[ $RESP =~ "Print: Entry, \"CFBundleVersion\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
+    echo "CFBundleVersion key not found in plist file."
+  else
+    echo "CFBundleVersion key found in plist file: ${RESP}"
+  fi
+  echo
+  echo "ABORTING. To promote a build to a release, the specified buildNumber"
+  echo "and the existing CFBundleVersion must be the same value. You should"
+  echo "run ${PROGNAME} first without the release option."
+  echo
+  echo "Showing current values..."
+  showInfoPlist "${PATH_PLIST}"
+  exit 1
+fi
+
 if [[ $RESP =~ "Print: Entry, \"CFBundleVersion\", Does Not Exist" || ${RSLT} -ne 0 ]]; then
   #
   # Need to add a CFBundleVersion key to plist
@@ -834,6 +1114,7 @@ if [[ $RESP =~ "Print: Entry, \"CFBundleVersion\", Does Not Exist" || ${RSLT} -n
   RESP=$({ $PATH_PLIST_BUDDY -c "Set CFBundleVersion ${BUILDNUM_START}" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to add CFBundleVersion key to plist file."
     echo "Not sure what the problem is."
     echo
@@ -861,6 +1142,7 @@ else
   RESP=$({ $PATH_PLIST_BUDDY -c "Set CFBundleVersion ${BUILDNUM}" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to update CFBundleVersion key in plist file."
     echo "Not sure what the problem is."
     echo
@@ -871,6 +1153,7 @@ else
   RESP=$({ $PATH_PLIST_BUDDY -c "Print CFBundleVersion" "${PATH_PLIST}"; } 2>&1 )
   RSLT=$?
   if [[ ${RSLT} -ne 0 ]]; then
+    echo
     echo "ABORTING. Unable to verify updated CFBundleVersion key in plist file."
     echo "Not sure what the problem is."
     echo
@@ -912,7 +1195,7 @@ if [[ "${UPDATEPODSPEC}" -ne 0 ]]; then
   PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_DEV}', :tag => '${PODSPEC_TAG}' }"
 
   if [[ "${MAKERELEASE}" -ne 0 ]]; then
-    PODSPEC_TAG="${BUILDVER}-f${BUILDNUM}"
+    PODSPEC_TAG="${BUILDVER}-r${BUILDNUM}"
     PODSPEC_VER="${BUILDVER}"
     PODSPEC_SOURCE="{ :git => '${PODSPEC_URL}', :branch => '${PODSPEC_BRANCH_REL}', :tag => '${PODSPEC_TAG}' }"
   fi
@@ -970,7 +1253,7 @@ fi
 #
 GIT_COMMIT_TAG="${BUILDVER}-b${BUILDNUM}"
 if [[ "${MAKERELEASE}" -ne 0 ]]; then
-  GIT_COMMIT_TAG="${BUILDVER}-f${BUILDNUM}"
+  GIT_COMMIT_TAG="${BUILDVER}-r${BUILDNUM}"
 fi
 if [[ -n "${TAG_PREFIX}" ]]; then
   GIT_COMMIT_TAG="${TAG_PREFIX}-${GIT_COMMIT_TAG}"
@@ -982,10 +1265,32 @@ if [[ ${RSLT} -ne 0 ]]; then
   #
   # GIT_COMMIT_TAG is an invalid git refname.
   #
-  echo "The generated git commit tag is invalid: ${GIT_COMMIT_TAG}."
   echo
-  echo "ABORTING. Consider revising the specified releaseVersion and/or Buildnum."
+  echo "ABORTING. The generated git commit tag is invalid: ${GIT_COMMIT_TAG}"
+  echo "Consider revising the specified releaseVersion and/or buildNumber."
   echo
+  echo "Showing current values..."
+  showInfoPlist "${PATH_PLIST}"
+  showPodspec "${PATH_PODSPEC}"
+  exit 1
+fi
+
+# make sure GIT_COMMIT_TAG doesn't conflict with an existing tag in the repo
+RESP=$({ $PATH_GIT rev-parse "${GIT_COMMIT_TAG}"; } 2>&1 )
+RSLT=$?
+if [[ ${RSLT} -ne 128 ]]; then
+  #
+  # GIT_COMMIT_TAG already exists
+  #
+  echo
+  echo "ABORTING. The generated git commit tag already exists: ${GIT_COMMIT_TAG}"
+  echo "                                               commit: ${RESP}"
+  echo
+  echo "Consider revising the specified releaseVersion and/or buildNumber."
+  echo
+  echo "Showing current values..."
+  showInfoPlist "${PATH_PLIST}"
+  showPodspec "${PATH_PODSPEC}"
   exit 1
 fi
 
@@ -996,6 +1301,7 @@ if [[ $RESP =~ "fatal: " || ${RSLT} -ne 0 ]]; then
   #
   # Couldn't determine current branch, maybe we're not in the right directory?
   #
+  echo
   echo "ABORTING. Couldn't determine current branch or something else went wrong."
   echo "Are you in the correct directory?"
   echo
@@ -1013,6 +1319,7 @@ if [[ $RESP =~ "fatal: " || ${RSLT} -ne 0 ]]; then
   #
   # Unable to commit?!
   #
+  echo
   echo "ABORTING. Unable to commit changes to git repo. Maybe you should try and"
   echo "run git manually with the --dry-run flag to see what's wrong."
   echo
@@ -1030,6 +1337,7 @@ if [[ $RESP =~ "fatal: " || ${RSLT} -ne 0 ]]; then
   #
   # Unable to commit?!
   #
+  echo
   echo "ABORTING. Unable to apply tag to commit: ${GIT_COMMIT_HASH}"
   echo "Not sure what the problem is."
   echo
