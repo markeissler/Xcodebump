@@ -80,7 +80,14 @@ When creating a release, you should specify the -r (release) flag, doing so chan
 
 The command would look like this:
 
-	>sh ./.xcodebump.sh -r 2.5.1
+	>sh ./.xcodebump.sh -r -b 4 2.5.1
+	
+### Release Promotion (from Build)
+An important concept is the idea of *release promotion*. When you create a release, you actually promote an existing tagged build. The idea is that once development has completed on a build, the build is tested, and if everything checks out, then you move that build into the release stage.
+
+The release process might result in additional updated files, typically updated documentation (although often times those may have already been updated during development) but in general, the build itself will not change at this point. You will want to tag your repo to identify it as a release, you will likely want to maintain some sort of relationship between the release commit and the build commit it came from. And if you are developing a library or framework that is distributed via Cocoapods, you will want to update your podspec file to point to the correct release commit in the repo. All of these tasks are handled by Xcodebump.
+
+When you specify the -r (release) flag you will also have to specify a buildNumber with the -b (build) flag. Xcodebump will analyze your Info.plist file and will only attempt to create a release if the buildNumber and releaseVersion that you specified match those found the aforementioned files. If the parameters match, then the podspec file will be updated as documented in the Podspec Support section below.
 
 ## Commit Tags
 Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and buildNumber. The format looks like this:
