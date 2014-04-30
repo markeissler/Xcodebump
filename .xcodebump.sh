@@ -66,7 +66,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.2
+VERSION=1.1.3
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -698,10 +698,6 @@ if [ "${FETCHINFO}" -eq 0 ]; then
   else
     cli_BUILDVER="${1}"
   fi
-
-  if [ "${DEBUG}" -ne 0 ]; then
-    echo "BUILDVER set from cli: ${BUILDVER}"
-  fi
 fi
 
 # Configure std sed
@@ -832,6 +828,10 @@ if [ -n "${cli_BUILDVER}" ]; then
     echo "release version string must conform to SemVer (Semantic Versioning)"
     echo "format."
     exit 1
+  fi
+
+  if [ "${DEBUG}" -ne 0 ]; then
+    echo "BUILDVER set from cli: ${BUILDVER}"
   fi
 fi
 
