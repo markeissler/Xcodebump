@@ -819,6 +819,14 @@ fi
 ##
 if [ "${FETCHINFO}" -eq 1 ]; then
   echo "Showing current values..."
+  if [ -n "${TARGETNAME}" ]; then
+    if [ -z "${PATH_PLIST}" ]; then
+      PATH_PLIST=$(findInfoPlist)
+    fi
+    if [ -z "${PATH_PODSPEC}" ]; then
+      PATH_PODSPEC=$(findPodspec)
+    fi
+  fi
   showInfoPlist "${PATH_PLIST}"
   showPodspec "${PATH_PODSPEC}"
   exit 0
