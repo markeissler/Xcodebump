@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 #
 # STEmacsModelines:
 # -*- Shell-Unix-Generic -*-
@@ -66,7 +66,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.3
+VERSION=1.1.5
 PROGNAME=`basename $0`
 
 # standard config file location
@@ -707,7 +707,7 @@ fi
 #
 if [[ -n "${PATH_SED}" ]] && [[ -x "${PATH_SED}" ]]; then
   PATH_STD_SED="${PATH_SED}"
-elif [[ -x "/usr/bin/seds" ]]; then
+elif [[ -x "/usr/bin/sed" ]]; then
   PATH_STD_SED="/usr/bin/sed"
 else
   echo
@@ -726,13 +726,25 @@ fi
 # load config
 echo
 printf "Checking for a config file... "
-if [ -s "${PATH_CONFIG}" ]; then
+if [ -s "${PATH_CONFIG}" ] && [ -r "${PATH_CONFIG}" ]; then
   source "${PATH_CONFIG}" &> /dev/null
 else
   printf "!!"
   echo
   echo "ABORTING. The xcodebump config file ("${PATH_CONFIG}") is missing or empty!"
   echo
+  _configDir=$(${PATH_DIRNAME} "${PATH_CONFIG}")
+  _configExample="${_configDir}/.xcodebump-example.cfg"
+  if [ -f "${_configExample}" ]; then
+    echo "It looks like the example config file exists in the same location: "
+    echo
+    echo "     ${_configExample}"
+    echo
+    echo "Did you remember to customize and appropriately rename a copy of the example?"
+    echo
+  fi
+  unset _configDir
+  unset _configExample
   exit 1
 fi
 echo "Found: ${PATH_CONFIG}"
