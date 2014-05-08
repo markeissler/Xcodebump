@@ -22,8 +22,40 @@ Copy .xcodebump.sh (script) and .xcodebump.cfg (config) files into the top-level
 
 **NOTE:** It is intended that you copy **both** of these files into your project so that you won't have to worry about future changes to this code.
 
+### Cocoapods
+The easiest way to install Xcodebump is with [Cocoapods](http://cocoapods.org)! Add the following dependency to your project's podfile...
+
+For a release build:
+
+	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git"
+
+For a development build:
+
+	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git",
+	    :branch => 'develop'
+
+**NOTE:** When installing with [Cocoapods](http://cocoapods.org), the installation script will copy the .xcodebump-wrapper.sh script into your project root directory, renaming it to ".xcodebump.sh" along the way. This script will call the actual script in the Pods directory. You may want to add the following alias to your .bashrc file to make it easier to call xcodebump manually:
+
+	alias xcodebump="sh .xcodebump.sh"
+
+### .gitignore
+Because you can easily re-install Xcodebump with [Cocoapods](http://cocoapods.org), your .gitignore file should likely contain the following:
+
+	# Xcodebump
+	.xcodebump.sh
+	.xcodebump-example.cfg
+	
+The only Xcodebump file you will want to checkin to your repo is your customized .xcodebump.cfg file.
+
+### Updating
+Once again, [Cocoapods](http://cocoapods.org) makes it easy to update to the latest version of Xcodebump:
+
+	>pod update Xcodebump
+	
+Your .xcodebump.cfg file never be overwritten during an update. Also, the example config will only be copied over to your project if the installation process detects that no .xcodebump.cfg file is present.
+
 ### Config file
-You should script to setup defaults at the least:
+Rename the provided ".xcodebump-example.cfg" file to ".xcodebump.cfg". At a minimum, you should setup the following parameters in the configuration file:
 
 	BUILDVER_START="1.0.0"
 	BUILDNUM_START=1
@@ -38,22 +70,30 @@ Xcodebump will search the current directory for the appropriate Info.plist file 
 	>sh ../.xcodebump.sh -l MyTarget/Info.plist 2.5.1
 	
 ### Script PATHs
-Verify paths to git, cut, head, find, grep:
+Verify paths to grep, sed, git:
 
-	PATH_GIT="/usr/local/bin/git"
-	PATH_CUT="/usr/bin/cut"
-	PATH_HEAD="/usr/bin/head"
-	PATH_FIND="/usr/bin/find"
 	PATH_GREP="/usr/local/bin/ggrep"
-	
-**WARNING: Make sure you point to the correct version of git installed on your machine.**
+	PATH_SED="/usr/local/bin/gsed"
+	PATH_GIT="/usr/local/bin/git"
 
-Note that in the above example both git and ggrep have custom paths. The custom path to grep is absolutely necessary as it must point to a GNU grep, which is not installed on current distributions of OSX. As noted in the .xcodebump.cfg file, you can install that version of grep using [homebrew](http://brew.sh/):
+It is unlikely you'll have to edit any remaining PATHs that are defined in the script as they point to system defaults.
+
+The custom path to grep is absolutely necessary as it must point to GNU grep), which is not installed on current distributions of OSX. As noted in the .xcodebump.cfg file, you can install GNU grep using [homebrew](http://brew.sh/):
 
 	>brew tap homebrew/dupes
-	>brew install homebrew/dupes/grep
+	>brew install grep
 
-The above commands will install the new grep as "ggrep" so you can avoid any potential conflicts with the BSD version of grep native to OSX.
+The above commands will install the GNU grep as "ggrep" (instead of just "grep") so you can avoid any potential conflicts with the BSD version of grep native to OSX.
+
+You will also need to install GNU sed in the same way:
+
+	>brew install gnu-sed
+
+The above commands will install the new sed as "gsed" so you can avoid any potential conflicts with the BSD version of grep native to OSX.
+
+Configure a custom path to git if you've installed (and have been using) another version on your system.
+
+**WARNING: Make sure you point to the correct version of git on your machine.**
 	
 ## Usage
 
@@ -70,6 +110,14 @@ To get a list of supported command line flags and parameters:
 	>sh ./.xcodebump.sh -h
 
 In general, options specified on the command line will override defaults and those found in the config file. There is one exception: if a value is set for tagPrefix in the config file, you can override the value from the command line as long as the override is not an empty string. To clear the tagPrefix, use the -e command line option.
+
+### Parameter Value Preference
+Configured values are considered in this order of preference where each subsequent level is awarded a higher preference:
+
+* .xcodebump.cfg (config file)
+* command line options (flag and parameters)
+
+Command line options are always given the highest preference.
 
 ## Release Version
 The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump: it's a feature, not a bug. In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle. But with that said, support for incrementing the marketing version string will likely be added soon just for the convenience.
