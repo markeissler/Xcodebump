@@ -311,15 +311,18 @@ function semverToArray() {
 # NOTE: The return pattern here is structured so that all of the following tests
 # will work because we echo a value and set the return status...
 #
+# Using return value (function exit status captured in $?):
 #  STAT=$(isSemver "${BUILDVER}")
 #  STAC=$?
-#  if [[ ${STAC} -eq 1 ]]; then
+#  if [[ ${STAC} -eq 0 ]]; then
 #
 # - or -
-#  if [[ $(isSemver "${BUILDVER}") -eq 0 ]]; then
+# Using echo value (captured in output from function):
+#  if [[ $(isSemver "${BUILDVER}") -eq 1 ]]; then
 #
 # - or -
-#  if [ ! $(isSemver "${BUILDVER}") ]; then
+# Using echo value (captured in output from function):
+#  if [ $(isSemver "${BUILDVER}") -eq 1 ]; then
 #
 function isSemver() {
   if [[ -z "${1}" ]]; then
