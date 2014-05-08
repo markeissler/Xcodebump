@@ -30,7 +30,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 PATH_XCODEBUMP="Pods/Xcodebump/.xcodebump.sh"
-if [ ! -x "${PATH_XCODEBUMP}" ]; then
+if [ ! -f "${PATH_XCODEBUMP}" ]; then
   echo "Unable to find Xcodebump. Have you installed it? If not, update your"
   echo "Podfile and then run:"
   echo
@@ -44,4 +44,4 @@ if [ ! -x "${PATH_XCODEBUMP}" ]; then
 fi
 
 # run it and pass-through cli options!
-${PATH_XCODEBUMP} "${@}"
+/bin/sh ${PATH_XCODEBUMP} "${@}"
