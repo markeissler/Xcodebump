@@ -843,7 +843,9 @@ if [ "${FETCHINFO}" -eq 1 ]; then
     fi
   fi
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 0
 fi
 
@@ -1309,7 +1311,9 @@ if [[ ${RSLT} -ne 0 ]]; then
   echo
   echo "Showing current values..."
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 1
 fi
 
@@ -1328,7 +1332,9 @@ if [[ ${RSLT} -ne 128 ]]; then
   echo
   echo "Showing current values..."
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 1
 fi
 
