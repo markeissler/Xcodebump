@@ -396,12 +396,17 @@ function isGnuSed() {
 
 # findInfoPlist()
 #
-# Search the current directory for a TARGET-Info.plist file.
+# Search the current directory for a TARGET/Info.plist file, if not found try
+# looking for a TARGET-Info.plist file.
 #
 function findInfoPlist() {
-  _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+  _plistPath=$({ $PATH_FIND "./${TARGETNAME}" -type f -name "Info.plist" -print0; } 2>&1 )
   if [[ -z ${_plistPath} || $? -ne 0 ]]; then
-    echo ""; return 1;
+    # try looking for a TARGET-Info.plist file...
+    _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+    if [[ -z ${_plistPath} || $? -ne 0 ]]; then
+      echo ""; return 1;
+    fi
   fi
 
   echo ${_plistPath}; return 0
