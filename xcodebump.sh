@@ -843,7 +843,9 @@ if [ "${FETCHINFO}" -eq 1 ]; then
     fi
   fi
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 0
 fi
 
@@ -972,7 +974,7 @@ if [ -n "${cli_PODSPECURL}" ]; then
   cleanString cli_PODSPECURL;
   PODSPEC_URL=${cli_PODSPECURL};
   # if it doesn't end in .git, assume it is a base url
-  if [[ ! ${PODSPEC_URL} =~ ".git$" ]]; then
+  if [[ ! ${PODSPEC_URL} =~ .git$ ]]; then
     PODSPEC_URL=$(echo "${PODSPEC_URL}" | ${PATH_SED} -r "s|\/$||");
     PODSPEC_URL="${PODSPEC_URL}/${TARGETNAME}.git";
   fi
@@ -1309,7 +1311,9 @@ if [[ ${RSLT} -ne 0 ]]; then
   echo
   echo "Showing current values..."
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 1
 fi
 
@@ -1328,7 +1332,9 @@ if [[ ${RSLT} -ne 128 ]]; then
   echo
   echo "Showing current values..."
   showInfoPlist "${PATH_PLIST}"
-  showPodspec "${PATH_PODSPEC}"
+  if [ -r "${PATH_PODSPEC}" ]; then
+    showPodspec "${PATH_PODSPEC}"
+  fi
   exit 1
 fi
 
