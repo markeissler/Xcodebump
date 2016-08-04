@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # STEmacsModelines:
 # -*- Shell-Unix-Generic -*-
@@ -18,8 +18,18 @@
 # - Gnu Sed is required to support case insensitive match/replace. On OSX you
 #   will have to install this version sed. Use homebrew. See instructions below.
 #
+# Installation:
+# - Copy this script and the .xcodebump-example.cfg file into a directory at
+#   the root of your home folder:
+#   >mkdir ~/.xcodebump
+#   >cp xcodebump.sh ~/.xcodebump/xcodebump.sh
+#   >chmod 755 ~/.xcodebump/xcodebump.sh
+#   >cp xcodebump-example.cfg ~/.xcodebump/xcodebump-example.cfg
+#   >chmod 644 ~/.xcodebump/xcodebump-example.cfg
+#   >ln -s ~/.xcodebump/xcodebump.sh ~/bin/xcodebump
+#
 
-# Copyright (c) 2014 Mark Eissler
+# Copyright (c) 2014-2016 Mark Eissler
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -386,12 +396,17 @@ function isGnuSed() {
 
 # findInfoPlist()
 #
-# Search the current directory for a TARGET-Info.plist file.
+# Search the current directory for a TARGET/Info.plist file, if not found try
+# looking for a TARGET-Info.plist file.
 #
 function findInfoPlist() {
-  _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+  _plistPath=$({ $PATH_FIND "./${TARGETNAME}" -type f -name "Info.plist" -print0; } 2>&1 )
   if [[ -z ${_plistPath} || $? -ne 0 ]]; then
-    echo ""; return 1;
+    # try looking for a TARGET-Info.plist file...
+    _plistPath=$({ $PATH_FIND . -type f -name "${TARGETNAME}-Info.plist" -print0; } 2>&1 )
+    if [[ -z ${_plistPath} || $? -ne 0 ]]; then
+      echo ""; return 1;
+    fi
   fi
 
   echo ${_plistPath}; return 0
