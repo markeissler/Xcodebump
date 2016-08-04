@@ -974,7 +974,7 @@ if [ -n "${cli_PODSPECURL}" ]; then
   cleanString cli_PODSPECURL;
   PODSPEC_URL=${cli_PODSPECURL};
   # if it doesn't end in .git, assume it is a base url
-  if [[ ! ${PODSPEC_URL} =~ ".git$" ]]; then
+  if [[ ! ${PODSPEC_URL} =~ .git$ ]]; then
     PODSPEC_URL=$(echo "${PODSPEC_URL}" | ${PATH_SED} -r "s|\/$||");
     PODSPEC_URL="${PODSPEC_URL}/${TARGETNAME}.git";
   fi
