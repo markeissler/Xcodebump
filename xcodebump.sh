@@ -19,7 +19,7 @@
 #   will have to install this version sed. Use homebrew. See instructions below.
 #
 # Installation:
-# - Copy this script and the .xcodebump-example.cfg file into a directory at
+# - Copy this script and the xcodebump-example.cfg file into a directory at
 #   the root of your home folder:
 #   >mkdir ~/.xcodebump
 #   >cp xcodebump.sh ~/.xcodebump/xcodebump.sh
