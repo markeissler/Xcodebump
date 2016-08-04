@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # STEmacsModelines:
 # -*- Shell-Unix-Generic -*-
@@ -17,6 +17,16 @@
 #
 # - Gnu Sed is required to support case insensitive match/replace. On OSX you
 #   will have to install this version sed. Use homebrew. See instructions below.
+#
+# Installation:
+# - Copy this script and the .xcodebump-example.cfg file into a directory at
+#   the root of your home folder:
+#   >mkdir ~/.xcodebump
+#   >cp xcodebump.sh ~/.xcodebump/xcodebump.sh
+#   >chmod 755 ~/.xcodebump/xcodebump.sh
+#   >cp xcodebump-example.cfg ~/.xcodebump/xcodebump-example.cfg
+#   >chmod 644 ~/.xcodebump/xcodebump-example.cfg
+#   >ln -s ~/.xcodebump/xcodebump.sh ~/bin/xcodebump
 #
 
 # Copyright (c) 2014 Mark Eissler
