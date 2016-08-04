@@ -18,41 +18,39 @@ With Xcodebump you can specify a marketing version string and everything else wi
 
 ## Installation
 
-Copy .xcodebump.sh (script) and .xcodebump.cfg (config) files into the top-level of your Xcode project. Edit the config file parameters and PATH parameters in the script as needed.
+The suggested installation involves copying the Xcodebump files into your home directory, followed by the creation of an alias pointing to the script.
 
-**NOTE:** It is intended that you copy **both** of these files into your project so that you won't have to worry about future changes to this code.
+1 - Create the Xcodebump directory in your home directory:
+
+```
+	>mkdir ~/.xcodebump
+```
+
+2 - Copy script and templates:
+
+```
+	>cp xcodebump.sh ~/.xcodebump
+	>cp xcodebump.sh-example.cfg ~/.xcodebump/xcodebump.sh
+	>chmod 755 ~/.xcodebump/xcodebump.sh
+	>cp xcodebump-example.cfg ~/.xcodebump/xcodebump-example.cfg
+	>chmod 644 ~/.xcodebump/xcodebump-example.cfg
+```
+
+3 - Add an alias to your `.bashrc` file:
+
+```
+	# xcodebump support
+	alias xcodebump="sh ~/.xcodebump/xcodebump.sh"
+```
+
+**NOTE:** These instructions assume `bash` is your default shell. An alternative to the above alias is to create the following symlink in your `~/bin` directory (provided that you have that directory and it is contained in your search path):
+
+```
+	>ln -s ~/.xcodebump/xcodebump.sh ~/bin/xcodebump
+```
 
 ### Cocoapods
-The easiest way to install Xcodebump is with [Cocoapods](http://cocoapods.org)! Add the following dependency to your project's podfile...
-
-For a release build:
-
-	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git"
-
-For a development build:
-
-	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git",
-	    :branch => 'develop'
-
-**NOTE:** When installing with [Cocoapods](http://cocoapods.org), the installation script will copy the .xcodebump-wrapper.sh script into your project root directory, renaming it to ".xcodebump.sh" along the way. This script will call the actual script in the Pods directory. You may want to add the following alias to your .bashrc file to make it easier to call xcodebump manually:
-
-	alias xcodebump="sh .xcodebump.sh"
-
-### .gitignore
-Because you can easily re-install Xcodebump with [Cocoapods](http://cocoapods.org), your .gitignore file should likely contain the following:
-
-	# Xcodebump
-	.xcodebump.sh
-	.xcodebump-example.cfg
-	
-The only Xcodebump file you will want to checkin to your repo is your customized .xcodebump.cfg file.
-
-### Updating
-Once again, [Cocoapods](http://cocoapods.org) makes it easy to update to the latest version of Xcodebump:
-
-	>pod update Xcodebump
-	
-Your .xcodebump.cfg file never be overwritten during an update. Also, the example config will only be copied over to your project if the installation process detects that no .xcodebump.cfg file is present.
+>Due to technical and mission changes in the cocoapods project, it is no longer possible to install Xcodebump via cocoapods.
 
 ### Config file
 Rename the provided ".xcodebump-example.cfg" file to ".xcodebump.cfg". At a minimum, you should setup the following parameters in the configuration file:
@@ -195,8 +193,3 @@ Submit bugs by opening an issue on this project's github page.
 ## License
 
 Xcodebump is licensed under the MIT open source license.
-
-## Appreciation
-Like this script? Let me know! You can send some kudos my way courtesy of Flattr:
-
-[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=markeissler&url=https://github.com/markeissler/Xcodebump&title=Xcodebump&language=bash&tags=github&category=software)
