@@ -1,4 +1,10 @@
 
+1.2.2 / 2016-08-04
+==================
+
+  * Update README to clarify how release promotion works.
+  * Add support to allow creating a release without committing further changes.
+
 1.2.1 / 2016-08-04
 ==================
 
