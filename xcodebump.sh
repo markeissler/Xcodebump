@@ -94,6 +94,7 @@ PATH_PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 # reset internal vars (do not touch these here)
 DEBUG=0
+ADDCONFIG=0
 FORCEEXEC=0
 FETCHINFO=0
 GETOPT_OLD=0
