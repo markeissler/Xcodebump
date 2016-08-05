@@ -18,44 +18,46 @@ With Xcodebump you can specify a marketing version string and everything else wi
 
 ## Installation
 
-Copy .xcodebump.sh (script) and .xcodebump.cfg (config) files into the top-level of your Xcode project. Edit the config file parameters and PATH parameters in the script as needed.
+The suggested installation involves copying the Xcodebump files into your home directory, followed by the creation of an alias pointing to the script.
 
-**NOTE:** It is intended that you copy **both** of these files into your project so that you won't have to worry about future changes to this code.
+1 - Create the Xcodebump directory in your home directory:
+
+```
+	>mkdir ~/.xcodebump
+```
+
+2 - Copy script and templates:
+
+```
+	>cp xcodebump.sh ~/.xcodebump
+	>cp xcodebump.sh-example.cfg ~/.xcodebump/xcodebump.sh
+	>chmod 755 ~/.xcodebump/xcodebump.sh
+	>cp xcodebump-example.cfg ~/.xcodebump/xcodebump-example.cfg
+	>chmod 644 ~/.xcodebump/xcodebump-example.cfg
+```
+
+3 - Add an alias to your `.bashrc` file:
+
+```
+	# xcodebump support
+	alias xcodebump="sh ~/.xcodebump/xcodebump.sh"
+```
+
+**NOTE:** These instructions assume `bash` is your default shell. An alternative to the above alias is to create the following symlink in your `~/bin` directory (provided that you have that directory and it is contained in your search path):
+
+```
+	>ln -s ~/.xcodebump/xcodebump.sh ~/bin/xcodebump
+```
 
 ### Cocoapods
-The easiest way to install Xcodebump is with [Cocoapods](http://cocoapods.org)! Add the following dependency to your project's podfile...
-
-For a release build:
-
-	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git"
-
-For a development build:
-
-	pod "Xcodebump", :git => "https://github.com/markeissler/Xcodebump.git",
-	    :branch => 'develop'
-
-**NOTE:** When installing with [Cocoapods](http://cocoapods.org), the installation script will copy the .xcodebump-wrapper.sh script into your project root directory, renaming it to ".xcodebump.sh" along the way. This script will call the actual script in the Pods directory. You may want to add the following alias to your .bashrc file to make it easier to call xcodebump manually:
-
-	alias xcodebump="sh .xcodebump.sh"
-
-### .gitignore
-Because you can easily re-install Xcodebump with [Cocoapods](http://cocoapods.org), your .gitignore file should likely contain the following:
-
-	# Xcodebump
-	.xcodebump.sh
-	.xcodebump-example.cfg
-	
-The only Xcodebump file you will want to checkin to your repo is your customized .xcodebump.cfg file.
-
-### Updating
-Once again, [Cocoapods](http://cocoapods.org) makes it easy to update to the latest version of Xcodebump:
-
-	>pod update Xcodebump
-	
-Your .xcodebump.cfg file never be overwritten during an update. Also, the example config will only be copied over to your project if the installation process detects that no .xcodebump.cfg file is present.
+>Due to technical and mission changes in the cocoapods project, it is no longer possible to install Xcodebump via cocoapods.
 
 ### Config file
-Rename the provided ".xcodebump-example.cfg" file to ".xcodebump.cfg". At a minimum, you should setup the following parameters in the configuration file:
+Copy an example config file into the current directory:
+```
+	>xcodebump -a
+```
+Rename the example file to ".xcodebump.cfg" or it will be ignored. At a minimum, you should setup the following parameters in the configuration file:
 
 	BUILDVER_START="1.0.0"
 	BUILDNUM_START=1
@@ -67,7 +69,7 @@ You can also specify the target here so you won't have to supply it on the comma
 ### Info.plist path
 Xcodebump will search the current directory for the appropriate Info.plist file based on the TARGETNAME using *find(1)*. Under some circumstances you may need to manually specify the path:
 
-	>sh ../.xcodebump.sh -l MyTarget/Info.plist 2.5.1
+	>xcodebump -l MyTarget/Info.plist 2.5.1
 	
 ### Script PATHs
 Verify paths to grep, sed, git:
@@ -99,15 +101,15 @@ Configure a custom path to git if you've installed (and have been using) another
 
 Once you're ready to create a build (for testing, release, whatever) just run Xcodebump from the top level of your project. The following example would update the marketing version string to "2.5.1" and increment the build number:
 
-	>sh ./.xcodebump.sh 2.5.1
+	>xcodebump 2.5.1
 	
 The target for the above command is the one specified by the **TARGETNAME** parameter in the config file. You can also specify the TARGETNAME on the command line:
 
-	>sh ./.xcodebump.sh -t MyTarget 2.5.1
+	>xcodebump -t MyTarget 2.5.1
 	
 To get a list of supported command line flags and parameters:
 
-	>sh ./.xcodebump.sh -h
+	>xcodebump -h
 
 In general, options specified on the command line will override defaults and those found in the config file. There is one exception: if a value is set for tagPrefix in the config file, you can override the value from the command line as long as the override is not an empty string. To clear the tagPrefix, use the -e command line option.
 
@@ -128,7 +130,7 @@ When creating a release, you should specify the -r (release) flag, doing so chan
 
 The command would look like this:
 
-	>sh ./.xcodebump.sh -r -b 4 2.5.1
+	>xcodebump -r -b 4 2.5.1
 	
 ### Release Promotion (from Build)
 An important concept is the idea of *release promotion*. When you create a release, you actually promote an existing tagged build. The idea is that once development has completed on a build, the build is tested, and if everything checks out, then you move that build into the release stage.
@@ -144,7 +146,7 @@ Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and bui
 	
 Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-". The tagPrefix can be suppressed with the -e flag.
 
-	>sh ./.xcodedbump.sh -e 2.5.1
+	>xcodedbump.sh -e 2.5.1
 
 ## Multiple Targets
 There is no specific support for projects with multiple targets at this time. Just run Xcodebump for each target separately.
@@ -154,7 +156,7 @@ Preliminary support for updating a podspec file is under development. This is ve
 
 To update a podspec file, specify the -u (update-podspec) flag and the -w (url-podspec) flag at a minimum. The name of the podspec file will be assumed to be "TARGET.podspec" and the current directory will be searched. You can also specify a path to the podspec explicitly with the -s (path-podspec) flag.
 
-	>sh ./.xcodebump.sh -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+	>xcodebump -u -e -w "'https://github.com/USERNAME/'" 2.5.1
 
 In the above example, the user supplied a base url, in which case the "TARGET.git" string would be appended. You can also specify the entire url. The above command will result in the following changes:
 
@@ -171,7 +173,7 @@ In the above example, the user supplied a base url, in which case the "TARGET.gi
 
 Running the command for a release like this:
 
-	>sh ./.xcodebump.sh -r -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+	>xcodebump -r -u -e -w "'https://github.com/USERNAME/'" 2.5.1
 
 Will result in the following changes:
 
@@ -195,8 +197,3 @@ Submit bugs by opening an issue on this project's github page.
 ## License
 
 Xcodebump is licensed under the MIT open source license.
-
-## Appreciation
-Like this script? Let me know! You can send some kudos my way courtesy of Flattr:
-
-[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=markeissler&url=https://github.com/markeissler/Xcodebump&title=Xcodebump&language=bash&tags=github&category=software)
