@@ -80,7 +80,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.1.5
+VERSION=1.2.0
 PROGNAME=`basename $0`
 
 # Where are we?
