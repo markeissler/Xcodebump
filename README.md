@@ -53,7 +53,11 @@ The suggested installation involves copying the Xcodebump files into your home d
 >Due to technical and mission changes in the cocoapods project, it is no longer possible to install Xcodebump via cocoapods.
 
 ### Config file
-Rename the provided ".xcodebump-example.cfg" file to ".xcodebump.cfg". At a minimum, you should setup the following parameters in the configuration file:
+Copy an example config file into the current directory:
+```
+	>xcodebump -a
+```
+Rename the example file to ".xcodebump.cfg" or it will be ignored. At a minimum, you should setup the following parameters in the configuration file:
 
 	BUILDVER_START="1.0.0"
 	BUILDNUM_START=1
@@ -65,7 +69,7 @@ You can also specify the target here so you won't have to supply it on the comma
 ### Info.plist path
 Xcodebump will search the current directory for the appropriate Info.plist file based on the TARGETNAME using *find(1)*. Under some circumstances you may need to manually specify the path:
 
-	>sh ../.xcodebump.sh -l MyTarget/Info.plist 2.5.1
+	>xcodebump -l MyTarget/Info.plist 2.5.1
 	
 ### Script PATHs
 Verify paths to grep, sed, git:
@@ -97,15 +101,15 @@ Configure a custom path to git if you've installed (and have been using) another
 
 Once you're ready to create a build (for testing, release, whatever) just run Xcodebump from the top level of your project. The following example would update the marketing version string to "2.5.1" and increment the build number:
 
-	>sh ./.xcodebump.sh 2.5.1
+	>xcodebump 2.5.1
 	
 The target for the above command is the one specified by the **TARGETNAME** parameter in the config file. You can also specify the TARGETNAME on the command line:
 
-	>sh ./.xcodebump.sh -t MyTarget 2.5.1
+	>xcodebump -t MyTarget 2.5.1
 	
 To get a list of supported command line flags and parameters:
 
-	>sh ./.xcodebump.sh -h
+	>xcodebump -h
 
 In general, options specified on the command line will override defaults and those found in the config file. There is one exception: if a value is set for tagPrefix in the config file, you can override the value from the command line as long as the override is not an empty string. To clear the tagPrefix, use the -e command line option.
 
@@ -126,7 +130,7 @@ When creating a release, you should specify the -r (release) flag, doing so chan
 
 The command would look like this:
 
-	>sh ./.xcodebump.sh -r -b 4 2.5.1
+	>xcodebump -r -b 4 2.5.1
 	
 ### Release Promotion (from Build)
 An important concept is the idea of *release promotion*. When you create a release, you actually promote an existing tagged build. The idea is that once development has completed on a build, the build is tested, and if everything checks out, then you move that build into the release stage.
@@ -142,7 +146,7 @@ Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and bui
 	
 Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-". The tagPrefix can be suppressed with the -e flag.
 
-	>sh ./.xcodedbump.sh -e 2.5.1
+	>xcodedbump.sh -e 2.5.1
 
 ## Multiple Targets
 There is no specific support for projects with multiple targets at this time. Just run Xcodebump for each target separately.
@@ -152,7 +156,7 @@ Preliminary support for updating a podspec file is under development. This is ve
 
 To update a podspec file, specify the -u (update-podspec) flag and the -w (url-podspec) flag at a minimum. The name of the podspec file will be assumed to be "TARGET.podspec" and the current directory will be searched. You can also specify a path to the podspec explicitly with the -s (path-podspec) flag.
 
-	>sh ./.xcodebump.sh -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+	>xcodebump -u -e -w "'https://github.com/USERNAME/'" 2.5.1
 
 In the above example, the user supplied a base url, in which case the "TARGET.git" string would be appended. You can also specify the entire url. The above command will result in the following changes:
 
@@ -169,7 +173,7 @@ In the above example, the user supplied a base url, in which case the "TARGET.gi
 
 Running the command for a release like this:
 
-	>sh ./.xcodebump.sh -r -u -e -w "'https://github.com/USERNAME/'" 2.5.1
+	>xcodebump -r -u -e -w "'https://github.com/USERNAME/'" 2.5.1
 
 Will result in the following changes:
 
