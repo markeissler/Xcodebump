@@ -80,7 +80,7 @@ PATH_SED="/usr/local/bin/gsed"
 
 
 ###### NO SERVICABLE PARTS BELOW ######
-VERSION=1.2.0
+VERSION=1.2.1
 PROGNAME=`basename $0`
 
 # Where are we?
@@ -94,6 +94,7 @@ PATH_PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 # reset internal vars (do not touch these here)
 DEBUG=0
+ADDCONFIG=0
 FORCEEXEC=0
 FETCHINFO=0
 GETOPT_OLD=0
