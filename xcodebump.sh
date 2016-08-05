@@ -1454,18 +1454,41 @@ GIT_CURRENT_BRANCH=${RESP}
 # we need to escape GIT_CURRENT_BRANCH to use in a regex
 GIT_CURRENT_BRANCH_ESC=$( echo ${GIT_CURRENT_BRANCH} | ${PATH_SED} -e 's/[\/&]/\\&/g' )
 
-# add all files and commit
-RESP=$({ $PATH_GIT add .; $PATH_GIT commit -am "Updated build to ${GIT_COMMIT_TAG}"; } 2>&1 )
+# are there files to commit?
+RESP=$({ $PATH_GIT status --porcelain --null; } 2>&1 )
 RSLT=$?
-if [[ $RESP =~ "fatal: " || ${RSLT} -ne 0 ]]; then
-  #
-  # Unable to commit?!
-  #
-  echo
-  echo "ABORTING. Unable to commit changes to git repo. Maybe you should try and"
-  echo "run git manually with the --dry-run flag to see what's wrong."
-  echo
-  exit 1
+if [[ "${MAKERELEASE}" -eq 1 ]] && [[ $RESP == "" ]]; then
+  if [ "${FORCEEXEC}" -eq 0 ]; then
+    # warn that we are about to tag without committing any files
+    echo "WARNING. You are about to promote a build to release without changing"
+    echo "any additional files."
+    ##
+    ## @TODO: Remove prompt for incorrect BUILDNUM
+    ##
+    # prompt user for confirmation
+    if [[ "no" == $(promptConfirm "Continue with release promotion?") || \
+      "no" == $(promptConfirm "Are you *really* sure?") ]]
+    then
+      echo "Aborting."
+      exit 1
+    fi
+    ##
+    ##
+  fi
+else
+  # add all files and commit
+  RESP=$({ $PATH_GIT add .; $PATH_GIT commit -am "Updated build to ${GIT_COMMIT_TAG}"; } 2>&1 )
+  RSLT=$?
+  if [[ $RESP =~ "fatal: " || ${RSLT} -ne 0 ]]; then
+    #
+    # Unable to commit?!
+    #
+    echo
+    echo "ABORTING. Unable to commit changes to git repo. Maybe you should try and"
+    echo "run git manually with the --dry-run flag to see what's wrong."
+    echo
+    exit 1
+  fi
 fi
 
 # Grab our commit hash, we do it this way because we cannot be sure that another
