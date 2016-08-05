@@ -122,7 +122,9 @@ Configured values are considered in this order of preference where each subseque
 Command line options are always given the highest preference.
 
 ## Release Version
-The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump: it's a feature, not a bug. In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle. But with that said, support for incrementing the marketing version string will likely be added soon just for the convenience.
+The marketing version string (CFBundleShortVersionString, or releaseVersion) is never changed automatically by Xcodebump, meaning: you have to specify a different releaseVersion on the command line to create a new releaseVersion (compare this to the build number which will be incremented automatically unless a different build number is specified with the `-b` option).
+
+>In general, it's minimally destructive to create additional builds by bumping the buildNumber, but generating a new releaseVersion should always be viewed as a major event in the development cycle.
 
 When creating a release, you should specify the -r (release) flag, doing so changes the format of the git commit tag and also changes the format of the podspec version flag (see below). The commit tag will include the "r" ("release") character ahead of the build number:
 
@@ -131,11 +133,14 @@ When creating a release, you should specify the -r (release) flag, doing so chan
 The command would look like this:
 
 	>xcodebump -r -b 4 2.5.1
-	
+
+In the above example, `4` is the build number and `2.5.1` is the release version.	
 ### Release Promotion (from Build)
 An important concept is the idea of *release promotion*. When you create a release, you actually promote an existing tagged build. The idea is that once development has completed on a build, the build is tested, and if everything checks out, then you move that build into the release stage.
 
-The release process might result in additional updated files, typically updated documentation (although often times those may have already been updated during development) but in general, the build itself will not change at this point. You will want to tag your repo to identify it as a release, you will likely want to maintain some sort of relationship between the release commit and the build commit it came from. And if you are developing a library or framework that is distributed via Cocoapods, you will want to update your podspec file to point to the correct release commit in the repo. All of these tasks are handled by Xcodebump.
+You will want to tag your repo to identify it as a release and you will likely want to maintain some sort of relationship between the release commit and the build commit it came from. And if you are developing a library or framework that is distributed via Cocoapods, you will want to update your podspec file to point to the correct release commit in the repo. All of these tasks are handled by Xcodebump.
+
+>At this point, the release process might result in additional updated files, typically updated documentation (although often times those may have already been updated during development) but in general, the build itself will not change at this point. Xcodebump expects that there should be additional updated files that need to be committed before you execute the release promotion and will display a warning if no files have changed (unless you specify the `-f` flag).
 
 When you specify the -r (release) flag you will also have to specify a buildNumber with the -b (build) flag. Xcodebump will analyze your Info.plist file and will only attempt to create a release if the buildNumber and releaseVersion that you specified match those found the aforementioned files. If the parameters match, then the podspec file will be updated as documented in the Podspec Support section below.
 
@@ -146,7 +151,7 @@ Xcodebump will generate a commit tag based on tagPrefix, releaseVersion, and bui
 	
 Where "build" is a configured tagPrefix string. You can set the tagPrefix on the command line or in the config file. The default is set to "build-". The tagPrefix can be suppressed with the -e flag.
 
-	>xcodedbump.sh -e 2.5.1
+	>xcodedbump -e 2.5.1
 
 ## Multiple Targets
 There is no specific support for projects with multiple targets at this time. Just run Xcodebump for each target separately.
