@@ -53,6 +53,10 @@ PATH_GIT="/usr/bin/git"
 PATH_CUT="/usr/bin/cut"
 PATH_HEAD="/usr/bin/head"
 PATH_FIND="/usr/bin/find"
+PATH_CP="/bin/cp"
+PATH_RM="/bin/rm"
+PATH_TOUCH="/usr/bin/touch"
+PATH_BASENAME="/usr/bin/basename"
 
 # Install gnu grep via homebrew... (this will not symlink for you)
 #
@@ -79,8 +83,13 @@ PATH_SED="/usr/local/bin/gsed"
 VERSION=1.1.5
 PROGNAME=`basename $0`
 
+# Where are we?
+#
+PATH_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # standard config file location
 PATH_CONFIG=".xcodebump.cfg"
+PATH_CONFIG_EXAMPLE="${PATH_SCRIPT}/xcodebump-example.cfg"
 PATH_PLIST_BUDDY="/usr/libexec/PlistBuddy"
 
 # reset internal vars (do not touch these here)
@@ -127,6 +136,7 @@ Update the marketing and build numbers for the xcode project. This script will
 grab the info from the command line or configuration file.
 
 OPTIONS:
+   -a, --add-config             Adds config example to current directory
    -b, --build buildNumber      Sets build to buildNumber specified
    -d, --debug                  Turn debugging on (increases verbosity)
    -c, --path-config cFilePath  Path to config file (overrides default)
@@ -159,6 +169,7 @@ Update the marketing and build numbers for the xcode project. This script will
 grab the info from the command line or configuration file.
 
 OPTIONS:
+   -a                           Adds config example to current directory
    -b buildNumber               Sets build to buildNumber specified
    -d                           Turn debugging on (increases verbosity)
    -c cFilePath                 Path to config file (overrides default)
@@ -388,6 +399,71 @@ function isGnuSed() {
   RESP=$({ ${1} --version | ${PATH_HEAD} -n 1; } 2>&1 )
   RSLT=$?
   if [[ ! $RESP =~ "${1} (GNU sed)" ]]; then
+    echo 0; return 1;
+  fi
+
+  echo 1; return 0;
+}
+
+# isPathWriteable()
+#
+# Checks if a given path (file or directory) is writeable by the current user.
+#
+function isPathWriteable() {
+  if [ -z "${1}" ]; then
+    echo 0; return 1
+  fi
+
+  # path is a directory...
+  if [[ -d "${1}" ]]; then
+    local path="${1%/}/.test"
+    local resp rslt
+    resp=$({ ${PATH_TOUCH} "${path}"; } 2>&1)
+    rslt=$?
+    if [[ ${rslt} -ne 0 ]]; then
+      # not writeable directory
+      echo 0; return 1
+    else
+      # writeable directory
+      ${PATH_RM} "${path}"
+      echo 1; return 0
+    fi
+  fi
+
+  # path is a file...
+  if [ -w "${1}" ]; then
+    # writeable file
+    echo 1; return 0
+  else
+    # not writeable file
+    echo 0; return 1
+  fi
+
+  # and if we fall through...
+  echo 0; return 128
+}
+
+# addConfig()
+#
+# Copy config example file to directory specified.
+#
+function addConfig() {
+  if [[ -z "${1}" ]]; then
+    echo 0; return 1;
+  fi
+
+  local _directory="${1}"
+
+  if [[ -d "${_directory}" && $(isPathWriteable "${_directory}") -ne 1 ]] \
+    || [[ ! -d "${_directory}" ]]; then
+    exit 1
+    echo 0; return 1;
+  fi
+
+  local _configFile="$(${PATH_BASENAME} "${PATH_CONFIG_EXAMPLE}")"
+  RESP=$({ ${PATH_CP} "${PATH_CONFIG_EXAMPLE}" "${_directory}/.${_configFile}"; } 2>&1 )
+  RSLT=$?
+  if [[ ${RSLT} -ne 0 ]]; then
     echo 0; return 1;
   fi
 
@@ -645,6 +721,7 @@ function promptConfirm() {
 # parse cli parameters
 #
 # Our options:
+#   --add-config, a
 #   --build, b
 #   --path-config, c
 #   --path-plist, l
@@ -666,12 +743,12 @@ getopt -T > /dev/null
 if [ $? -eq 4 ]; then
   # GNU enhanced getopt is available
   PROGNAME=`basename $0`
-  params="$(getopt --name "$PROGNAME" --long build:,path-config:,path-plist:,prefix:,empty-prefix,release,target:,path-podspec:,update-podspec,url-podspec:,force,info,help,version,debug --options b:c:l:p:ert:s:uw:fihvd -- "$@")"
+  params="$(getopt --name "$PROGNAME" --long add-config,build:,path-config:,path-plist:,prefix:,empty-prefix,release,target:,path-podspec:,update-podspec,url-podspec:,force,info,help,version,debug --options ab:c:l:p:ert:s:uw:fihvd -- "$@")"
 else
   # Original getopt is available
   GETOPT_OLD=1
   PROGNAME=`basename $0`
-  params="$(getopt b:c:l:p:ert:s:uw:fihvd "$@")"
+  params="$(getopt ab:c:l:p:ert:s:uw:fihvd "$@")"
 fi
 
 # check for invalid params passed; bail out if error is set.
@@ -685,6 +762,7 @@ unset params
 
 while [ $# -gt 0 ]; do
   case "$1" in
+    -a | --add)             cli_ADDCONFIG=1; ADDCONFIG=${cli_ADDCONFIG};;
     -b | --build)           cli_BUILDNUM="$2"; shift;;
     -c | --path-config)     cli_CONFIGPATH="$2"; shift;;
     -l | --path-plist)      cli_PLISTPATH="$2"; shift;;
@@ -704,6 +782,25 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
+
+# Copy config example file and quit
+#
+if [ "${ADDCONFIG}" -eq 1 ]; then
+  echo
+  printf "Copying example config file to current directory... "
+  if [[ $(addConfig "${PWD}") -eq 0 ]]; then
+    printf "!!"
+    echo
+    echo "ABORTING. Unable to access Xcodebump output directory: ${PWD}"
+    echo "Must be a write permissions error."
+    echo
+    exit 1
+  fi
+  echo "Copied config file."
+  echo "Make sure you edit the file and rename it to \".xcodebump.cfg\"."
+  echo
+  exit 0
+fi
 
 if [ "${FETCHINFO}" -eq 0 ]; then
   # Grab final argument (the release version aka BUILDVER)
