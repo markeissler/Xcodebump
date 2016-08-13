@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+#
+# -*- Ruby.sublime-syntax -*-
+#
+# @author Mark Eissler
+#
+# This script does the following:
+# 1. Update the Xcode marketing version string (CFBundleShortVersionString) to
+#   the releaseVersion supplied.
+# 2. Increment the Xcode build number (CFBundleVersion) to the bundleVersion
+#   supplied or increment an existing number.
+# 3. Commit changes to git.
+# 4. Generate a tag to identify the commit the release/build and tag the commit.
+#
+require 'xcodebump'
+
+begin
+  app = Xcodebump::Application.new(ARGV)
+  app.run
+rescue StandardError => err
+  app.handle_error(err.message)
+  raise err
+end
