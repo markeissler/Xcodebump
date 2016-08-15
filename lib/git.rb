@@ -5,7 +5,6 @@
 #
 module Xcodebump
   require_relative 'vcs'
-  require 'open3'
   require 'pathname'
 
   #
@@ -168,6 +167,36 @@ module Xcodebump
 
       _stdout, _stderr, _status = self.run_command("tag", _annotate_params)
       _status.success?
+    end
+
+  protected
+    # Run a Git command with the supplied arguments.
+    #
+    # Parameter arguments (in the args array) should be double quoted.
+    #
+    # @example
+    #   ["-m", "\"My message text is here.\""]
+    #
+    # @param command [String] the command to execute
+    # @param args=[] [Array] list of quoted parameters and arguments
+    #
+    # @return [String, String, Process::Status] stdout, stderr, and the status
+    #   of the command results.
+    #
+    # @see Process::Status
+    #
+    # @raise [ArgumentError] this exception is raised if the command
+    #   parameter is set to an empty string.
+    #
+    def run_command(command, args=[])
+      _command = command
+      if _command.empty?
+        raise ArgumentError, "command parameter required but not supplied"
+      end
+      # create array of working directory and command ahead of all args
+      _command_args = ["-C \"#{self.working_directory}\"", "#{command}"]
+      _command_args.push(*args)
+      _stdout, _stderr, _status = super(_command_args)
     end
   end
 
