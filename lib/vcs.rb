@@ -24,12 +24,16 @@ module Xcodebump
 
     # Set the working directory.
     #
+    # This method will return false if the directory path exists but isn't a
+    # valid directory (perhaps it's a file).
+    #
     # @param directory [String] path to the working directory
     #
     # @return [Bool] true if directory is valid, false otherwise
     #
-    # @raise [ArgumentError] raises this exception if the directory is invalid
-    #   (either it doesn't exist of isn't a directory).
+    # @raise [ArgumentError] raises this exception if the directory is
+    #   invalid (it doesn't exist).
+    #
     def working_directory=(directory)
       @working_directory_raw = Pathname.new(directory.chomp('/'))
       begin

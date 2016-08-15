@@ -26,12 +26,15 @@ module Xcodebump
 
     # Set the VCS command path.
     #
+    # This method will return false if the command_path path exists but isn't a
+    # valid file (perhaps it's a directory).
+    #
     # @param command_path [String] path for the VCS command line interface
     #
     # @return [Bool] true if command is valid, false otherwise
     #
     # @raise [ArgumentError] raises this exception if the command_path is
-    #   invalid (either it doesn't exist or isn't a file).
+    #   invalid (it doesn't exist).
     #
     def command_path=(command_path)
       _command_path = command_path
@@ -68,7 +71,7 @@ module Xcodebump
     #
     def run_command(args=[])
       _args_string = args.join(" ")
-      _stdout, _stderr, _status = Open3.capture3("#{self.command_path} #{_args_string}")
+      _stdout, _stderr, _status = Open3.capture3("\"#{self.command_path}\" #{_args_string}")
     end
   end
 
