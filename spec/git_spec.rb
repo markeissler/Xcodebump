@@ -9,7 +9,7 @@ require 'tmpdir'
 describe Xcodebump::Git do
   before do
     @tag = "build-1.0.1-b329"
-    @working_directory = "/tmp/xcodebump_test_project"
+    @working_directory = "/tmp/xcodebump_test_project/git_test"
     @git = Xcodebump::Git.new(@working_directory)
   end
 
@@ -20,7 +20,7 @@ describe Xcodebump::Git do
   end
 
   it "can be created with a path and command argument" do
-    _git = Xcodebump::Git.new("/tmp/xcodebump_test_project", "git")
+    _git = Xcodebump::Git.new("/tmp/xcodebump_test_project/git_test", "git")
     _git.must_be_instance_of(Xcodebump::Git)
   end
 
@@ -52,7 +52,7 @@ describe Xcodebump::Git do
   end
 
   it "can write a new commit to an existing repo" do
-    _tmp_project_path = "/tmp/xcodebump_test_project"
+    _tmp_project_path = "/tmp/xcodebump_test_project/git_test"
     _tmp_project_file = "test2.txt"
     _tmp_project_tag = "build-1.0.1-b330"
     _tmp_project_message = "Updated build to #{_tmp_project_tag}"
