@@ -15,7 +15,8 @@ describe Xcodebump::Git do
 
   # test init methods
   it "can be created with no arguments" do
-    @git.must_be_instance_of Xcodebump::Git
+    _git = Xcodebump::Git.new()
+    _git.must_be_instance_of Xcodebump::Git
   end
 
   it "can be created with a path and command argument" do
