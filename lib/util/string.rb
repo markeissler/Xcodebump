@@ -11,6 +11,8 @@ module Xcodebump
     # @author Mark Eissler
     #
     module String
+      require 'date'
+
       # Validate a string to see if it complies with Semantic Versioning
       # (SemVer) syntax.
       #
@@ -94,6 +96,101 @@ module Xcodebump
       #
       def is_valid_semver_metadata?(metadata)
         !metadata.match(/^\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*$/).nil?
+      end
+
+      # Increment the trailing numerical portion of the prerelease component of
+      # a string that conforms with Semantic Versioning (SemVer) syntax.
+      #
+      # @example
+      #   +"1.2.1-build.2+abcd.we13"
+      #
+      #   <b>Expected output</b>
+      #   +"1.2.1-build.3+abcd.we13"
+      #
+      # @param semver [String] semver string to parse and increment
+      #
+      # @return [String] updated semver string
+      #
+      # @raise [ArgumentError] this exception is raised if the semver string
+      #   does not conform to SemVer syntax.
+      #
+      # @note This does not handle M.m.p format outside of incrementing the
+      #   patch digits.
+      #
+      def increment_semver_prerelease(semver)
+        unless is_valid_semver?(semver)
+          raise ArgumentError, "specified semver is not SemVer compliant: #{semver}"
+        end
+        # extract prerelease ("-build.2")
+        _prerelease_match = semver.match(/\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/)
+        # replace in original string  ("1.2.1[[PRE]]+abcd.we13")
+        _tmp_semver = semver.sub(/\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/,"[[PRE]]")
+        # find the trailing digits
+        _trailing_digits_match = _prerelease_match.to_s.match(/[0-9]+$/)
+        # replace in _prerelease
+        _tmp_prerelease = _prerelease_match.to_s.sub((/[0-9]+$/), "[[DIGITS]]")
+        # increment
+        _digits = _trailing_digits_match.to_s.to_i
+        _digits = _digits += 1
+        # replace in _tmp_prerelease
+        _new_prerelease = _tmp_prerelease.sub("[[DIGITS]]", "#{_digits}")
+        # replace in _tmp_semver
+        _new_semver = _tmp_semver.sub("[[PRE]]", "#{_new_prerelease}")
+      end
+
+      # Increment the trailing numerical portion of the metadata component of a
+      # string that conforms with Semantic Versioning (SemVer) syntax. Dates are
+      # detected and updated with the current date if the date pattern conforms
+      # to one of the following format specifiers:
+      #
+      #   +"%Y%m%d%H%M%S"
+      #
+      # @example
+      #   +"1.2.1-build.2+abcd.we13"
+      #   +"1.2.1-build.2+abcd.20130313144700" (date)
+      #
+      #   <b>Expected output</b>
+      #   +"1.2.1-build.2+abcd.we14"
+      #   +"1.2.1-build.2+abcd.20160818110330" (if Now is 20160818110330)
+      #
+      # @param semver [String] semver string to parse and increment
+      #
+      # @return [String] updated semver string
+      #
+      # @raise [ArgumentError] this exception is raised if the semver string
+      #   does not conform to SemVer syntax.
+      #
+      def increment_semver_metadata(semver)
+        unless is_valid_semver?(semver)
+          raise ArgumentError, "specified semver is not SemVer compliant: #{semver}"
+        end
+        # extract metadata ("+abcd.we13")
+        _metadata_match = semver.match(/\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/)
+        # replace in original string  ("1.2.1-build.2[[META]]")
+        _tmp_semver = semver.sub(/\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/,"[[META]]")
+        # find the trailing digits
+        _trailing_digits_match = _metadata_match.to_s.match(/[0-9]+$/)
+        # replace in _prerelease
+        _tmp_metadata = _metadata_match.to_s.sub((/[0-9]+$/), "[[DIGITS]]")
+
+        ## is this a date?
+        _digits = ""
+        begin
+          # _digits = DateTime.parse(_trailing_digits_match.to_s)
+          # only parse for the output format we support
+          _digits = DateTime.strptime(_trailing_digits_match.to_s, "%Y%m%d%H%M%S")
+          _digits = DateTime.now()
+          _digits = _digits.strftime("%Y%m%d%H%M%S")
+        rescue
+          # increment
+          _digits = _trailing_digits_match.to_s.to_i
+          _digits = _digits += 1
+        end
+
+        # replace in _tmp_metadata
+        _new_metadata = _tmp_metadata.sub("[[DIGITS]]", "#{_digits}")
+        # replace in _tmp_semver
+        _new_semver = _tmp_semver.sub("[[META]]", "#{_new_metadata}")
       end
     end
   end

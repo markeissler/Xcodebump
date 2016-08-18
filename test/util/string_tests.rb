@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require 'util/string'
+require 'date'
 
 class XcodebumpUtilString < MiniTest::Test
   include Xcodebump::Util::String
@@ -112,5 +113,37 @@ class XcodebumpUtilString < MiniTest::Test
     for _invalid_string in @invalid_semver_metadata_list
       assert(!self.is_valid_semver_metadata?(_invalid_string), "Method is_valid_semver_metadata? returned true for invalid string: #{_invalid_string} ")
     end
+  end
+
+  def test_increment_semver_prerelease_with_valid_data
+    _valid_input_string = "1.2.1-build.2+abcd.we13"
+    _expected_output_string = "1.2.1-build.3+abcd.we13"
+    assert_equal(_expected_output_string, self.increment_semver_prerelease(_valid_input_string))
+  end
+
+  def test_increment_semver_prerelease_with_invalid_data
+    _invalid_input_string = "1.0.1-@beta"
+    assert_raises ArgumentError do
+      self.increment_semver_prerelease(_invalid_input_string)
+    end
+  end
+
+  def test_increment_semver_metadata_with_valid_data
+    _valid_input_string = "1.2.1-build.2+abcd.we13"
+    _expected_output_string = "1.2.1-build.2+abcd.we14"
+    assert_equal(_expected_output_string, self.increment_semver_metadata(_valid_input_string))
+  end
+
+  def test_increment_semver_metadata_with_invalid_data
+    _invalid_input_string = "1.0.1-@beta"
+    assert_raises ArgumentError do
+      self.increment_semver_metadata(_invalid_input_string)
+    end
+  end
+
+  def test_increment_semver_metadata_with_valid_date_metadata
+    _valid_input_string = "1.2.1-build.2+abcd.we.20130313144700"
+    _unexpected_output_string = "1.2.1-build.2+abcd.we.20130313144701"
+    refute_equal(_unexpected_output_string, self.increment_semver_metadata(_valid_input_string))
   end
 end
