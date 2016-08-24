@@ -206,13 +206,15 @@ module Xcodebump
       #   +["1.2.1", "build.2", "abcd.we13"]
       #
       # @param semver [String] semver string to parse
+      # @param strip_separators=true [Bool] if true, semver component separators
+      #   (-, +) will be stripped from output
       #
       # @return [Array] string parsed into SemVer components
       #
       # @raise [ArgumentError] this exception is raised if the semver string
       #   does not conform to SemVer syntax.
       #
-      def parse_semver(semver)
+      def parse_semver(semver, strip_separators=true)
         unless is_valid_semver?(semver)
           raise ArgumentError, "specified semver is not SemVer compliant: #{semver}"
         end
@@ -220,12 +222,12 @@ module Xcodebump
         _normal_version_string = semver.match(/^(?:[\d]+\.)(?:[\d]+\.)(?:[\d]+)/).to_s
         # extract prerelease ("-build.2")
         _prerelease_string = semver.match(/\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/).to_s
-        if _prerelease_string[0] == '-'
+        if strip_separators && _prerelease_string[0] == '-'
           _prerelease_string[0] = ''
         end
         # extract metadata ("+abcd.we13")
         _metadata_string = semver.match(/\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/).to_s
-        if _metadata_string[0] == '+'
+        if strip_separators && _metadata_string[0] == '+'
           _metadata_string[0] = ''
         end
 

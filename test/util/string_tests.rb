@@ -153,6 +153,12 @@ class XcodebumpUtilString < MiniTest::Test
     assert_equal(_expected_output_array, self.parse_semver(_valid_input_string))
   end
 
+  def test_parse_semver_with_valid_data_and_strip_separators_is_false
+    _valid_input_string = "1.2.1-build.2+abcd.we13"
+    _expected_output_array = ["1.2.1", "-build.2", "+abcd.we13"]
+    assert_equal(_expected_output_array, self.parse_semver(_valid_input_string, false))
+  end
+
   def test_parse_semver_with_invalid_data
     _invalid_input_string = "1.0.1-@beta"
     assert_raises ArgumentError do
