@@ -126,8 +126,8 @@ module Xcodebump
     #
     # @return [Bool] [description]
     #
-    # @see Xcodebump::Git::is_existing_tag?
-    # @see Xcodebump::Git::is_valid_refname?
+    # @see Xcodebump::Git::is_existing_tag?()
+    # @see Xcodebump::Git::is_valid_refname?()
     #
     # @raise [ArgumentError] raises this exception if the tag name parameter is
     #   set to an empty string, the tag is not well formed or the tag already
