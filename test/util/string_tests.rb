@@ -116,8 +116,8 @@ class XcodebumpUtilString < MiniTest::Test
   end
 
   def test_increment_semver_prerelease_with_valid_data
-    _valid_input_string = "1.2.1-build.2+abcd.we13"
-    _expected_output_string = "1.2.1-build.3+abcd.we13"
+    _valid_input_string = "build.2"
+    _expected_output_string = "build.3"
     assert_equal(_expected_output_string, self.increment_semver_prerelease(_valid_input_string))
   end
 
@@ -129,8 +129,8 @@ class XcodebumpUtilString < MiniTest::Test
   end
 
   def test_increment_semver_metadata_with_valid_data
-    _valid_input_string = "1.2.1-build.2+abcd.we13"
-    _expected_output_string = "1.2.1-build.2+abcd.we14"
+    _valid_input_string = "abcd.we13"
+    _expected_output_string = "abcd.we14"
     assert_equal(_expected_output_string, self.increment_semver_metadata(_valid_input_string))
   end
 
@@ -142,21 +142,57 @@ class XcodebumpUtilString < MiniTest::Test
   end
 
   def test_increment_semver_metadata_with_valid_date_metadata
-    _valid_input_string = "1.2.1-build.2+abcd.we.20130313144700"
-    _unexpected_output_string = "1.2.1-build.2+abcd.we.20130313144701"
+    _valid_input_string = "abcd.we.20130313144700"
+    _unexpected_output_string = "abcd.we.20130313144701"
     refute_equal(_unexpected_output_string, self.increment_semver_metadata(_valid_input_string))
+  end
+
+  def test_increment_semver_with_valid_data
+    @valid_increment_semver_hash = {
+      "1.0.1-alpha+123" => "1.0.1-alpha+124",
+      "1.0.1-b.12+we13" => "1.0.1-b.12+we14",
+      "1.0.1-beta.123+456" => "1.0.1-beta.123+457"
+    }
+    for _valid_input, _expected_output in @valid_increment_semver_hash
+      assert_equal(_expected_output, self.increment_semver(_valid_input))
+    end
+  end
+
+  def test_increment_semver_with_invalid_data
+    _invalid_input_string = "1.0.1-alpha" # missing metadata
+    assert_raises ArgumentError do
+      self.increment_semver(_invalid_input_string)
+    end
+  end
+
+  def test_increment_semver_with_valid_data_and_prerelease_is_true
+    @valid_increment_semver_hash = {
+      "1.0.1-alpha" => "1.0.1-alpha",
+      "1.0.1-b.12+we13" => "1.0.1-b.13+we13",
+      "1.0.1-beta.123+456" => "1.0.1-beta.124+456"
+    }
+    for _valid_input, _expected_output in @valid_increment_semver_hash
+      assert_equal(_expected_output, self.increment_semver(_valid_input, true))
+    end
+  end
+
+  def test_increment_semver_with_invalid_data_and_prerelease_is_true
+    _invalid_input_string = "1.0.1-@beta"
+    assert_raises ArgumentError do
+      self.increment_semver(_invalid_input_string, true)
+    end
   end
 
   def test_parse_semver_with_valid_data
     _valid_input_string = "1.2.1-build.2+abcd.we13"
-    _expected_output_array = ["1.2.1", "build.2", "abcd.we13"]
+    _expected_output_array = ["1.2.1", "-build.2", "+abcd.we13"]
     assert_equal(_expected_output_array, self.parse_semver(_valid_input_string))
   end
 
-  def test_parse_semver_with_valid_data_and_strip_separators_is_false
+  def test_parse_semver_with_valid_data_and_strip_separators_is_true
     _valid_input_string = "1.2.1-build.2+abcd.we13"
-    _expected_output_array = ["1.2.1", "-build.2", "+abcd.we13"]
-    assert_equal(_expected_output_array, self.parse_semver(_valid_input_string, false))
+    _expected_output_array = ["1.2.1", "build.2", "abcd.we13"]
+    assert_equal(_expected_output_array, self.parse_semver(_valid_input_string, true))
   end
 
   def test_parse_semver_with_invalid_data

@@ -98,39 +98,81 @@ module Xcodebump
         !metadata.match(/^\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*$/).nil?
       end
 
+      # Increment the the trailing numerical portion of the build or prerelease
+      # component of a string that conforms with Semantic Versioning (SemVer)
+      # syntax.
+      #
+      # By default, the build component will be updated; set the prerelease
+      # parameter to "true" to update the prerelease component instead.
+      #
+      # The following strings are valid:
+      # @example
+      #   1.0.1-alpha+123
+      #   1.0.1-b.12+we13
+      #   1.0.1-beta.123+456
+      #
+      #   <b>Expected output (prerelease=false)</b>
+      #   1.0.1-alpha+124
+      #   1.0.1-b.12+we14
+      #   1.0.1-beta.123+457
+      #
+      #   <b>Expected output (prerelease=true)</b>
+      #   1.0.1-alpha
+      #   1.0.1-b.12
+      #   1.0.1-beta.124+456
+      #
+      # @param semver [String] semver string to increment
+      # @param prerelease=false [Bool] if false (default), metadata component
+      #   will be incremented, otherwise prerelease component will be updated.
+      #
+      # @return [String] updated semver string
+      #
+      def increment_semver(semver, prerelease=false)
+        _normal_version, _prerelease, _metadata = self.parse_semver(semver, true)
+
+        if prerelease
+          _new_prerelease = self.increment_semver_prerelease(_prerelease)
+        else
+          _new_metadata = self.increment_semver_metadata(_metadata)
+        end
+        _new_prerelease ||= _prerelease
+        _new_metadata ||= _metadata
+
+        self.build_semver(_normal_version,
+          {
+            prerelease: _new_prerelease,
+            metadata: _new_metadata
+          }
+        )
+      end
+
       # Increment the trailing numerical portion of the prerelease component of
       # a string that conforms with Semantic Versioning (SemVer) syntax.
       #
       # @example
-      #   +"1.2.1-build.2+abcd.we13"
+      #   "build.2"
       #
       #   <b>Expected output</b>
-      #   +"1.2.1-build.3+abcd.we13"
+      #   "build.3"
       #
-      # @param semver [String] semver string to parse and increment
+      # @param semver [String] prerelease string to parse and increment
       #
-      # @return [String] updated semver string
+      # @return [String] updated prerelease string
       #
       # @note This does not handle M.m.p format outside of incrementing the
       #   patch digits.
       #
-      def increment_semver_prerelease(semver)
-        _normal_version, _prerelease, _metadata = self.parse_semver(semver)
+      def increment_semver_prerelease(prerelease)
+        unless is_valid_semver_prerelease?("-#{prerelease}")
+          raise ArgumentError, "specified prerelease is not SemVer compliant: #{prerelease}"
+        end
         # extract trailing digits from prerelease
-        _trailing_digits_match = _prerelease.match(/[0-9]+$/)
+        _trailing_digits_match = prerelease.match(/[0-9]+$/)
         # increment
         _digits = _trailing_digits_match.to_s.to_i
         _digits += 1
         # replace in _tmp_prerelease
-        _new_prerelease = _prerelease.sub(/[0-9]+$/, "#{_digits}")
-
-        # build new semver string
-        self.build_semver(_normal_version,
-          {
-            prerelease: _new_prerelease,
-            metadata: _metadata
-          }
-        )
+        _new_prerelease = prerelease.sub(/[0-9]+$/, "#{_digits}")
       end
 
       # Increment the trailing numerical portion of the metadata component of a
@@ -141,21 +183,23 @@ module Xcodebump
       #   +"%Y%m%d%H%M%S"
       #
       # @example
-      #   +"1.2.1-build.2+abcd.we13"
-      #   +"1.2.1-build.2+abcd.20130313144700" (date)
+      #   "abcd.we13"
+      #   "abcd.20130313144700" (date)
       #
       #   <b>Expected output</b>
-      #   +"1.2.1-build.2+abcd.we14"
-      #   +"1.2.1-build.2+abcd.20160818110330" (if Now is 20160818110330)
+      #   "abcd.we14"
+      #   "abcd.20160818110330" (if Now is 20160818110330)
       #
-      # @param semver [String] semver string to parse and increment
+      # @param semver [String] metadata string to parse and increment
       #
-      # @return [String] updated semver string
+      # @return [String] updated metadata string
       #
-      def increment_semver_metadata(semver)
-        _normal_version, _prerelease, _metadata = self.parse_semver(semver)
+      def increment_semver_metadata(metadata)
+        unless is_valid_semver_metadata?("+#{metadata}")
+          raise ArgumentError, "specified metadata is not SemVer compliant: #{metadata}"
+        end
         # extract trailing digits from metadata
-        _trailing_digits_match = _metadata.match(/[0-9]+$/)
+        _trailing_digits_match = metadata.match(/[0-9]+$/)
 
         ## is this a date?
         _digits = ""
@@ -172,16 +216,7 @@ module Xcodebump
         end
 
         # replace in _metadata
-        _new_metadata = _metadata.sub(/[0-9]+$/, "#{_digits}")
-
-        # build new semver string
-        #
-        self.build_semver(_normal_version,
-          {
-            prerelease: _prerelease,
-            metadata: _new_metadata
-          }
-        )
+        _new_metadata = metadata.sub(/[0-9]+$/, "#{_digits}")
       end
 
       # Parse a string that conforms with Semantic Versioning (SemVer) syntax
@@ -205,7 +240,7 @@ module Xcodebump
       # @raise [ArgumentError] this exception is raised if the semver string
       #   does not conform to SemVer syntax.
       #
-      def parse_semver(semver, strip_separators=true)
+      def parse_semver(semver, strip_separators=false)
         unless is_valid_semver?(semver)
           raise ArgumentError, "specified semver is not SemVer compliant: #{semver}"
         end
