@@ -4,7 +4,7 @@
 # @author  Mark Eissler
 #
 module Xcodebump
-  require 'cli'
+  require_relative 'cli'
   require 'pathname'
 
   #
