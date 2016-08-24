@@ -192,6 +192,45 @@ module Xcodebump
         # replace in _tmp_semver
         _new_semver = _tmp_semver.sub("[[META]]", "#{_new_metadata}")
       end
+
+      # Parse a string that conforms with Semantic Versioning (SemVer) syntax
+      # into three components:
+      #   + normal version
+      #   + pre-release
+      #   + metadata
+      #
+      # @example
+      #   +"1.2.1-build.2+abcd.we13"
+      #
+      #   <b>Expected output</b>
+      #   +["1.2.1", "build.2", "abcd.we13"]
+      #
+      # @param semver [String] semver string to parse
+      #
+      # @return [Array] string parsed into SemVer components
+      #
+      # @raise [ArgumentError] this exception is raised if the semver string
+      #   does not conform to SemVer syntax.
+      #
+      def parse_semver(semver)
+        unless is_valid_semver?(semver)
+          raise ArgumentError, "specified semver is not SemVer compliant: #{semver}"
+        end
+        # extract normal version
+        _normal_version_string = semver.match(/^(?:[\d]+\.)(?:[\d]+\.)(?:[\d]+)/).to_s
+        # extract prerelease ("-build.2")
+        _prerelease_string = semver.match(/\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/).to_s
+        if _prerelease_string[0] == '-'
+          _prerelease_string[0] = ''
+        end
+        # extract metadata ("+abcd.we13")
+        _metadata_string = semver.match(/\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*/).to_s
+        if _metadata_string[0] == '+'
+          _metadata_string[0] = ''
+        end
+
+        return [_normal_version_string, _prerelease_string, _metadata_string]
+      end
     end
   end
 end

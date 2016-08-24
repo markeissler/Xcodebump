@@ -146,4 +146,17 @@ class XcodebumpUtilString < MiniTest::Test
     _unexpected_output_string = "1.2.1-build.2+abcd.we.20130313144701"
     refute_equal(_unexpected_output_string, self.increment_semver_metadata(_valid_input_string))
   end
+
+  def test_parse_semver_with_valid_data
+    _valid_input_string = "1.2.1-build.2+abcd.we13"
+    _expected_output_array = ["1.2.1", "build.2", "abcd.we13"]
+    assert_equal(_expected_output_array, self.parse_semver(_valid_input_string))
+  end
+
+  def test_parse_semver_with_invalid_data
+    _invalid_input_string = "1.0.1-@beta"
+    assert_raises ArgumentError do
+      self.parse_semver(_invalid_input_string)
+    end
+  end
 end
