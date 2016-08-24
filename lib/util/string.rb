@@ -31,7 +31,7 @@ module Xcodebump
       # @see http://semver.org/
       #
       def is_valid_semver?(version)
-        !version.match(/^(?:[\d]+\.)(?:[\d]+\.)(?:[\d]+)(?:\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*)?(?:\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*)?$/).nil?
+        !version.match(/^(?:[\d]+\.){2}(?:[\d]+)(?:\-[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*)?(?:\+[a-zA-z0-9]+(?:\.[a-zA-z0-9]+)*)?$/).nil?
       end
 
       # Validate a string to see if it complies with Semantic Versioning
@@ -47,7 +47,7 @@ module Xcodebump
       # @return [Bool] true if normal_version string complies, false otherwise
       #
       def is_valid_semver_normal?(normal_version)
-        !normal_version.match(/^(?:[\d]+\.)(?:[\d]+\.)(?:[\d]+)$/).nil?
+        !normal_version.match(/^(?:[\d]+\.){2}(?:[\d]+)$/).nil?
       end
 
       # Validate a string to see if it complies with Semantic Versioning
