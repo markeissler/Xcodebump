@@ -233,6 +233,44 @@ module Xcodebump
 
         return [_normal_version_string, _prerelease_string, _metadata_string]
       end
+
+      # Build a string compliant with Semantic Versioning (SemVer) syntax from
+      # the specified components.
+      #
+      # At a minimum, the normal version string (M.m.p) must be provided.
+      #
+      # @param normal_version [String] the normal version string
+      # @param options={} [Hash] specify the following SemVer components as
+      #   strings:
+      #   +prerelease
+      #   +metadata
+      #
+      # @return [String] the resulting semver string
+      #
+      # @raise [ArgumentError] this exception is thrown if the normal_version
+      #   is missing or any of the supplied values don't conform to SemVer
+      #   syntax.
+      #
+      def build_semver(normal_version, options={})
+        unless is_valid_semver_normal?(normal_version)
+          raise ArgumentError, "specified normal_version is not SemVer compliant: #{normal_version}"
+        end
+        _semver = normal_version
+        if options.key?(:prerelease) and !(options[:prerelease].empty?)
+          unless is_valid_semver_prerelease?("-#{options[:prerelease]}")
+            raise ArgumentError, "specified prerelease is not SemVer compliant: #{options[:prerelease]}"
+          end
+          _semver += "-#{options[:prerelease].strip}"
+        end
+        if options.key?(:metadata) and !(options[:metadata].strip.empty?)
+          unless is_valid_semver_metadata?("+#{options[:metadata]}")
+            raise ArgumentError, "specified metadata is not SemVer compliant: #{options[:metadata]}"
+          end
+          _semver += "+#{options[:metadata].strip}"
+        end
+
+        return _semver
+      end
     end
   end
 end

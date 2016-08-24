@@ -165,4 +165,27 @@ class XcodebumpUtilString < MiniTest::Test
       self.parse_semver(_invalid_input_string)
     end
   end
+
+  def test_build_semver_with_no_data
+    assert_raises ArgumentError do
+      self.build_semver()
+    end
+  end
+
+  def test_build_semver_with_version_only
+    _valid_normal_version = "1.0.1"
+    assert_equal("1.0.1", self.build_semver(_valid_normal_version))
+  end
+
+  def test_build_semver_with_version_and_empty_options
+    _valid_normal_version = "1.0.1"
+    _valid_options = { prerelease: "", metadata: "" }
+    assert_equal("1.0.1", self.build_semver(_valid_normal_version, _valid_options))
+  end
+
+  def test_build_semver_with_version_and_options
+    _valid_normal_version = "1.0.1"
+    _valid_options = { prerelease: "build.3", metadata: "abcd.we13" }
+    assert_equal("1.0.1-build.3+abcd.we13", self.build_semver(_valid_normal_version, _valid_options))
+  end
 end
