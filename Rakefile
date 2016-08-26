@@ -1,9 +1,27 @@
 require 'rake/testtask'
 require 'date'
 require 'fileutils'
+require 'json'
 require 'open3'
 require 'pathname'
 require 'byebug'
+
+require_relative 'lib/util/file'
+include Xcodebump::Util::File
+
+#
+# load config, set some constants
+#
+config = Xcodebump::Util::File.load_config('./lib/version.json')
+
+PKG_DISPLAY_NAME   = config[:appname]
+PKG_NAME           = PKG_DISPLAY_NAME.downcase.gsub(/\s/, '-')
+PKG_VERSION        = config[:version]
+
+# load all rake tasks
+Dir.glob(File.expand_path("../lib/tasks/*.rake", __FILE__)).each do |file|
+  import file
+end
 
 test_task = Rake::TestTask.new :test do |t|
   t.libs << 'lib'

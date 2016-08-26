@@ -1,6 +1,16 @@
+#
+#
+require_relative 'lib/util/file'
+include Xcodebump::Util::File
+
+#
+# load config, set some constants
+#
+config = Xcodebump::Util::File.load_config('./lib/version.json')
+
 Gem::Specification.new do |s|
-  s.name = 'xcodebump'
-  s.version = '2.0.0'
+  s.name = config[:appname]
+  s.version = config[:version]
   s.licenses = ['MIT']
   s.date = '2016-08-09'
   s.summary = 'Easier manipulation of version and build numbers for Xcode projects.'
@@ -17,4 +27,8 @@ Gem::Specification.new do |s|
   s.files = ['lib/xcodebump.rb']
   s.homepage = 'https://github.com/markeissler/Xcodebump'
   s.require_paths = ['lib']
+  s.add_development_dependency 'bundler', '~> 1.4'
+  s.add_development_dependency 'rake', '~> 10.4.2'
+  s.add_development_dependency 'yard', '0.9.5'
+  s.add_development_dependency 'redcarpet', '3.3.4'
 end

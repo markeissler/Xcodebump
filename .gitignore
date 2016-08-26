@@ -6,3 +6,14 @@
 
 .DS_Store
 .byebug_history
+
+# Ignore yardoc object cache and generated docs
+.yardopts
+.yardoc
+
+# Ignore ydoc output files
+doc/yard
+
+# Ignore rdoc output files
+doc/rdoc
+doc/rdoc_converted
