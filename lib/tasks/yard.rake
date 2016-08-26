@@ -44,7 +44,8 @@ begin
       #
       yardoc.files += [
         '-',
-        'Changelog.md'
+        'Changelog.md',
+        'LICENSE.md'
       ]
     end
 
