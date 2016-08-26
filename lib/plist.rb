@@ -130,8 +130,9 @@ module Xcodebump
     # By default, the build component will be updated; set the prerelease
     # parameter to "true" to update the prerelease component instead.
     #
-    # @param prerelease=false [Bool] if false (default), metadata component
-    #   will be incremented, otherwise prerelease component will be updated.
+    # @param prerelease [Bool] optional prerelease flag, if true prerelease
+    #   component will be updated (default is false: metadata component
+    #   will be update)
     #
     # @return [String] updated build string
     #
@@ -158,7 +159,8 @@ module Xcodebump
     # Find a plist file in the specified search_directory.
     #
     # @param search_directory [String] directory to search in
-    # @param filename="Info.plist" [String] name of file to search for
+    # @param filename [String] optional name of file to search for (default is
+    #   "Info.plist")
     #
     # @return [String, nil] string containing path to found file on success,
     #   nil otherwise
@@ -267,7 +269,7 @@ module Xcodebump
     #   ["-c",  "\"Print CFBundleVersion\""]
     #
     # @param command [String] the command to execute
-    # @param args=[] [Array] list of quoted parameters and arguments
+    # @param args [Array] optional list of quoted parameters and arguments
     #
     # @return [String, String, Process::Status] stdout, stderr, and the status
     #   of the command results.

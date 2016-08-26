@@ -44,7 +44,7 @@ module Xcodebump
 
     # Return the most-recent commit hash for the specified branch.
     #
-    # @param branch="" [String] branch to check
+    # @param branch [String] branch to check (defaults to current branch)
     #
     # @return [String] 20-character SHA1 hash representing current commit
     #
@@ -121,8 +121,10 @@ module Xcodebump
     # commit on the current branch will be used as the target commit hash.
     #
     # @param tag [String] the commit tag name
-    # @param message="" [String] the annotated commit tag message
-    # @param commit="" [type] the commit to tag
+    # @param message [String] optional annotated commit tag message (default
+    #   is no message, which will force switch to annotated tag format)
+    # @param commit [type] optional specific commit to tag (default is current
+    #   commit)
     #
     # @return [Bool] [description]
     #
@@ -178,7 +180,7 @@ module Xcodebump
     #   ["-m", "\"My message text is here.\""]
     #
     # @param command [String] the command to execute
-    # @param args=[] [Array] list of quoted parameters and arguments
+    # @param args [Array] optional list of quoted parameters and arguments
     #
     # @return [String, String, Process::Status] stdout, stderr, and the status
     #   of the command results.

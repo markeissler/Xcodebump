@@ -61,8 +61,7 @@ module Xcodebump
     # @example
     #   ["-m", "\"My message text is here.\""]
     #
-    # @param command [String] the command to execute
-    # @param args=[] [Array] list of quoted parameters and arguments
+    # @param args [Array] optional list of quoted parameters and arguments
     #
     # @return [String, String, Process::Status] stdout, stderr, and the status
     #   of the command results.

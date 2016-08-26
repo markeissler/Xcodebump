@@ -111,19 +111,20 @@ module Xcodebump
       #   1.0.1-b.12+we13
       #   1.0.1-beta.123+456
       #
-      #   <b>Expected output (prerelease=false)</b>
+      #   Expected output (prerelease=false)
       #   1.0.1-alpha+124
       #   1.0.1-b.12+we14
       #   1.0.1-beta.123+457
       #
-      #   <b>Expected output (prerelease=true)</b>
+      #   Expected output (prerelease=true)
       #   1.0.1-alpha
       #   1.0.1-b.12
       #   1.0.1-beta.124+456
       #
       # @param semver [String] semver string to increment
-      # @param prerelease=false [Bool] if false (default), metadata component
-      #   will be incremented, otherwise prerelease component will be updated.
+      # @param prerelease [Bool] optional prerelease flag, if true prerelease
+      #   component will be updated (default is false: metadata component
+      #   will be update)
       #
       # @return [String] updated semver string
       #
@@ -152,10 +153,10 @@ module Xcodebump
       # @example
       #   "build.2"
       #
-      #   <b>Expected output</b>
+      #   Expected output
       #   "build.3"
       #
-      # @param semver [String] prerelease string to parse and increment
+      # @param prerelease [String] prerelease string to parse and increment
       #
       # @return [String] updated prerelease string
       #
@@ -186,11 +187,11 @@ module Xcodebump
       #   "abcd.we13"
       #   "abcd.20130313144700" (date)
       #
-      #   <b>Expected output</b>
+      #   Expected output
       #   "abcd.we14"
       #   "abcd.20160818110330" (if Now is 20160818110330)
       #
-      # @param semver [String] metadata string to parse and increment
+      # @param metadata [String] metadata string to parse and increment
       #
       # @return [String] updated metadata string
       #
@@ -226,13 +227,13 @@ module Xcodebump
       #   + metadata
       #
       # @example
-      #   +"1.2.1-build.2+abcd.we13"
+      #   "1.2.1-build.2+abcd.we13"
       #
-      #   <b>Expected output</b>
-      #   +["1.2.1", "build.2", "abcd.we13"]
+      #   Expected output
+      #   ["1.2.1", "build.2", "abcd.we13"]
       #
       # @param semver [String] semver string to parse
-      # @param strip_separators=true [Bool] if true, semver component separators
+      # @param strip_separators [Bool] if true, semver component separators
       #   (-, +) will be stripped from output
       #
       # @return [Array] string parsed into SemVer components
@@ -266,7 +267,7 @@ module Xcodebump
       # At a minimum, the normal version string (M.m.p) must be provided.
       #
       # @param normal_version [String] the normal version string
-      # @param options={} [Hash] specify the following SemVer components as
+      # @param options [Hash] specify the following SemVer components as
       #   strings:
       #   +prerelease
       #   +metadata
