@@ -33,7 +33,7 @@ module Xcodebump
         expanded_path = ::File.expand_path(path)
         if ::File.file?(expanded_path)
           file = ::File.read(expanded_path)
-          file_hash = JSON.parse(file)
+          file_hash = ::JSON.parse(file)
           file_hash.keys.each do |key|
             hash_with_symbols[key.to_sym] = file_hash[key]
           end
