@@ -37,4 +37,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rake', '~> 10.4.2'
   spec.add_development_dependency 'yard', '0.9.5'
   spec.add_development_dependency 'redcarpet', '3.3.4'
+  spec.add_development_dependency 'byebug', '~> 9.0.5'
 end
