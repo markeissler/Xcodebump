@@ -11,6 +11,7 @@ module Xcodebump
     # @author  Mark Eissler
     #
     module File
+      require 'json'
 
       # Load the json config file located at the specified path.
       #
