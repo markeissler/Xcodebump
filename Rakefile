@@ -6,7 +6,7 @@ require 'open3'
 require 'pathname'
 require 'byebug'
 
-require_relative 'lib/util/file'
+require_relative 'lib/xcodebump/util/file'
 include Xcodebump::Util::File
 
 #
@@ -24,7 +24,7 @@ Dir.glob(File.expand_path("../lib/tasks/*.rake", __FILE__)).each do |file|
 end
 
 test_task = Rake::TestTask.new :test do |t|
-  t.libs << 'lib'
+  t.libs << 'lib/xcodebump'
   t.test_files = FileList['test/**/*_tests.rb', 'spec/**/*_spec.rb']
   t.verbose = true
 end
