@@ -1,5 +1,5 @@
 ## Xcodebump 2
-[![Build Status](https://ci.mixtur.com/buildStatus/icon?job=Xcodebump)]()
+[![Build Status](http://ci.mixtur.com/buildStatus/icon?job=Xcodebump)]()
 [![License](http://img.shields.io/badge/license-MIT-yellowgreen.svg)](#license)
 
 > This project is being re-written in ruby and is currently incomplete. The following content documents the previous release ([Xcodebump 1](https://github.com/markeissler/Xcodebump)).
