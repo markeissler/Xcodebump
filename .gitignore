@@ -14,7 +14,9 @@
 
 # Ignore ydoc output files
 /doc/yard/
+/doc/yard_static/
 
 # Ignore rdoc output files
+/ri/
 /doc/rdoc/
-/doc/rdoc_converted/
+/doc/rdoc_static/
